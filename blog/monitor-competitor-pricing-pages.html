@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Monitor Competitor Pricing Pages for Changes | snapwatch</title>
+  <meta name="description" content="Stop checking competitor pricing pages manually. Set up automated webhook alerts that fire the moment a competitor changes their prices, adds a tier, or tweaks a feature limit — in under 10 minutes." />
+  <link rel="canonical" href="https://snapwatch.dev/blog/monitor-competitor-pricing-pages" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="How to Monitor Competitor Pricing Pages for Changes" />
+  <meta property="og:description" content="Automated competitor pricing page monitoring with webhook alerts. Know the moment a rival changes their prices, adds a tier, or adjusts limits." />
+  <meta property="og:url" content="https://snapwatch.dev/blog/monitor-competitor-pricing-pages" />
+  <meta property="og:site_name" content="snapwatch" />
+  <meta property="article:published_time" content="2026-09-07T00:00:00Z" />
+  <meta property="article:author" content="snapwatch" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="How to Monitor Competitor Pricing Pages for Changes" />
+  <meta name="twitter:description" content="Automated competitor pricing page monitoring. Know the moment a rival changes their prices — no more manual weekly checks." />
+
+  <!-- Schema.org Article -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "How to Monitor Competitor Pricing Pages for Changes",
+    "description": "Stop checking competitor pricing pages manually. Set up automated webhook alerts that fire the moment a competitor changes their prices, adds a tier, or tweaks a feature limit.",
+    "datePublished": "2026-09-07",
+    "author": { "@type": "Organization", "name": "snapwatch" },
+    "publisher": { "@type": "Organization", "name": "snapwatch", "url": "https://snapwatch.dev" },
+    "url": "https://snapwatch.dev/blog/monitor-competitor-pricing-pages"
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Mulish:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ─── Design tokens ─────────────────────────────────── */
+    :root {
+      --accent:      #FF8C00;
+      --accent-dim:  rgba(255, 140, 0, 0.12);
+      --accent-glow: rgba(255, 140, 0, 0.25);
+
+      --bg:          #080808;
+      --surface:     #111111;
+      --border:      #1E1E1E;
+      --border-hi:   #2A2A2A;
+
+      --text-hi:     #F0F0F0;
+      --text-lo:     #A0A0A0;
+      --text-xlo:    #5A5A5A;
+
+      --font-display: 'Syne', sans-serif;
+      --font-body:    'Mulish', sans-serif;
+      --font-mono:    'JetBrains Mono', monospace;
+
+      --content-w: 720px;
+      --radius:    6px;
+    }
+
+    /* ─── Reset ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text-hi);
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
+
+    /* ─── Nav ────────────────────────────────────────────── */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 56px;
+      background: rgba(8, 8, 8, 0.88);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--text-hi);
+      letter-spacing: -0.02em;
+    }
+    .nav-logo span { color: var(--accent); }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-lo);
+      transition: color 0.15s;
+    }
+    .nav-links a:hover { color: var(--text-hi); }
+    .nav-cta {
+      background: var(--accent);
+      color: #080808 !important;
+      padding: 6px 14px;
+      border-radius: var(--radius);
+      font-size: 13px !important;
+      font-weight: 700 !important;
+      transition: opacity 0.15s !important;
+    }
+    .nav-cta:hover { opacity: 0.88; color: #080808 !important; }
+
+    /* ─── Page shell ─────────────────────────────────────── */
+    .page {
+      max-width: var(--content-w);
+      margin: 0 auto;
+      padding: 64px 24px 120px;
+    }
+
+    /* ─── Post header ────────────────────────────────────── */
+    .post-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 10px;
+      border-radius: 999px;
+      margin-bottom: 24px;
+    }
+    .post-title {
+      font-family: var(--font-display);
+      font-size: clamp(26px, 4vw, 40px);
+      font-weight: 800;
+      line-height: 1.18;
+      letter-spacing: -0.03em;
+      color: var(--text-hi);
+      margin-bottom: 20px;
+    }
+    .post-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--text-xlo);
+      margin-bottom: 48px;
+      flex-wrap: wrap;
+    }
+    .post-meta-sep { color: var(--border-hi); }
+
+    /* ─── Divider ────────────────────────────────────────── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 40px 0;
+    }
+
+    /* ─── Body typography ────────────────────────────────── */
+    .post-body p {
+      color: var(--text-lo);
+      margin-bottom: 20px;
+      font-size: 15.5px;
+    }
+    .post-body p strong {
+      color: var(--text-hi);
+      font-weight: 600;
+    }
+    .post-body h2 {
+      font-family: var(--font-display);
+      font-size: clamp(18px, 2.5vw, 23px);
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--text-hi);
+      margin: 48px 0 16px;
+      line-height: 1.3;
+    }
+    .post-body h3 {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-hi);
+      margin: 32px 0 12px;
+    }
+    .post-body ul, .post-body ol {
+      color: var(--text-lo);
+      padding-left: 24px;
+      margin-bottom: 20px;
+      font-size: 15.5px;
+    }
+    .post-body li { margin-bottom: 8px; }
+    .post-body li strong { color: var(--text-hi); font-weight: 600; }
+    .post-body code {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--accent);
+    }
+
+    /* ─── Code blocks ─────────────────────────────────────── */
+    .code-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin: 24px 0;
+    }
+    .code-block-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+      background: #161616;
+    }
+    .code-block-lang {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .code-block-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-xlo);
+    }
+    .code-block pre {
+      padding: 20px;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.65;
+      color: #D4D4D4;
+    }
+    .code-block pre .keyword   { color: #569CD6; }
+    .code-block pre .string    { color: #CE9178; }
+    .code-block pre .comment   { color: #6A9955; font-style: italic; }
+    .code-block pre .number    { color: #B5CEA8; }
+    .code-block pre .property  { color: #9CDCFE; }
+    .code-block pre .fn        { color: #DCDCAA; }
+    .code-block pre .type      { color: #4EC9B0; }
+
+    /* ─── Info callout ────────────────────────────────────── */
+    .callout {
+      border-left: 3px solid var(--accent);
+      background: var(--accent-dim);
+      padding: 16px 20px;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin: 24px 0;
+    }
+    .callout p {
+      margin: 0;
+      font-size: 14.5px;
+      color: var(--text-lo);
+    }
+    .callout p strong { color: var(--text-hi); }
+
+    /* ─── Step header ─────────────────────────────────────── */
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin: 40px 0 16px;
+    }
+    .step-num {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #080808;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .step-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-hi);
+      letter-spacing: -0.02em;
+    }
+
+    /* ─── Use-case grid ──────────────────────────────────── */
+    .usecase-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin: 24px 0;
+    }
+    .usecase-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+    .usecase-card-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+    .usecase-card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-hi);
+      margin-bottom: 4px;
+    }
+    .usecase-card-desc {
+      font-size: 13px;
+      color: var(--text-lo);
+      line-height: 1.5;
+    }
+
+    /* ─── CTA box ────────────────────────────────────────── */
+    .cta-box {
+      background: var(--surface);
+      border: 1px solid var(--border-hi);
+      border-radius: 10px;
+      padding: 36px;
+      text-align: center;
+      margin: 56px 0 0;
+    }
+    .cta-box h2 {
+      font-family: var(--font-display);
+      font-size: clamp(20px, 3vw, 26px);
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      color: var(--text-hi);
+      margin-bottom: 12px;
+    }
+    .cta-box p {
+      color: var(--text-lo);
+      font-size: 15px;
+      margin-bottom: 24px;
+    }
+    .cta-btn {
+      display: inline-block;
+      background: var(--accent);
+      color: #080808;
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 14px;
+      padding: 12px 28px;
+      border-radius: var(--radius);
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+    .cta-btn:hover { opacity: 0.88; }
+    .cta-free {
+      font-size: 13px;
+      color: var(--text-xlo);
+      margin-top: 12px;
+    }
+
+    /* ─── Crosslinks ─────────────────────────────────────── */
+    .crosslinks {
+      margin-top: 48px;
+      border-top: 1px solid var(--border);
+      padding-top: 32px;
+    }
+    .crosslinks-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-xlo);
+      margin-bottom: 16px;
+    }
+    .crosslinks-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .crosslinks-list a {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 14.5px;
+      color: var(--text-lo);
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      transition: color 0.15s;
+    }
+    .crosslinks-list a:last-child { border-bottom: none; }
+    .crosslinks-list a:hover { color: var(--text-hi); }
+    .crosslink-arrow { color: var(--accent); flex-shrink: 0; margin-left: 16px; }
+
+    /* ─── Footer ─────────────────────────────────────────── */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 24px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-xlo);
+    }
+    .footer a {
+      color: var(--text-xlo);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .footer a:hover { color: var(--text-lo); }
+
+    @media (max-width: 600px) {
+      .nav-links { gap: 12px; }
+      .step-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="../index.html" class="nav-logo">snap<span>watch</span></a>
+  <ul class="nav-links">
+    <li><a href="../docs.html">API Docs</a></li>
+    <li><a href="./index.html">Blog</a></li>
+    <li><a href="../index.html#pricing" class="nav-cta">Get started free</a></li>
+  </ul>
+</nav>
+
+<main>
+  <article class="page">
+
+    <span class="post-label">Competitive Intelligence</span>
+
+    <h1 class="post-title">How to Monitor Competitor Pricing Pages for Changes</h1>
+
+    <div class="post-meta">
+      <span>snapwatch</span>
+      <span class="post-meta-sep">&middot;</span>
+      <span>Sep 7, 2026</span>
+      <span class="post-meta-sep">&middot;</span>
+      <span>9 min read</span>
+    </div>
+
+    <div class="post-body">
+
+      <p>
+        Competitor pricing pages are among the highest-value signals in any SaaS market. When a rival drops
+        their entry tier by 30%, adds a new enterprise plan, or quietly raises their API rate limits, that
+        information changes how you position, pitch, and close deals. The problem: most product and go-to-market
+        teams find out about these changes days or weeks after the fact — if ever.
+      </p>
+
+      <p>
+        Tools like Klue and Crayon index competitor pricing pages periodically, but their crawl frequencies
+        are unpredictable and the signal arrives in a dashboard you have to remember to check. A webhook-first
+        approach lets you know <em>immediately</em>, in the channels your team already lives in (Slack, Linear, Notion).
+      </p>
+
+      <p>
+        In this guide you will set up automated monitoring for five competitor pricing pages that fires a
+        structured webhook the moment any content changes. Total setup time: under 10 minutes.
+      </p>
+
+      <hr class="divider" />
+
+      <h2>What actually changes on a competitor pricing page</h2>
+
+      <p>
+        Before we build anything, it helps to know what signals matter most. Pricing pages are more dynamic
+        than they look. The high-value changes to catch:
+      </p>
+
+      <div class="usecase-grid">
+        <div class="usecase-card">
+          <div class="usecase-card-label">Price</div>
+          <div class="usecase-card-title">Tier price change</div>
+          <div class="usecase-card-desc">$49/mo becomes $39/mo — or goes up. Both are signals.</div>
+        </div>
+        <div class="usecase-card">
+          <div class="usecase-card-label">Structure</div>
+          <div class="usecase-card-title">New or removed tier</div>
+          <div class="usecase-card-desc">A new "Starter" plan added below your direct competitor tier.</div>
+        </div>
+        <div class="usecase-card">
+          <div class="usecase-card-label">Limits</div>
+          <div class="usecase-card-title">Feature limit adjustment</div>
+          <div class="usecase-card-desc">Seats, API calls, or storage limits raised without a price change.</div>
+        </div>
+        <div class="usecase-card">
+          <div class="usecase-card-label">Features</div>
+          <div class="usecase-card-title">Feature moved between tiers</div>
+          <div class="usecase-card-desc">SSO shifts from Enterprise to Pro — a significant positioning move.</div>
+        </div>
+        <div class="usecase-card">
+          <div class="usecase-card-label">Trial</div>
+          <div class="usecase-card-title">Free tier or trial changes</div>
+          <div class="usecase-card-desc">Free tier removed, trial shortened, or credit card requirement added.</div>
+        </div>
+        <div class="usecase-card">
+          <div class="usecase-card-label">Discount</div>
+          <div class="usecase-card-title">Promo or annual pricing</div>
+          <div class="usecase-card-desc">Annual discount raised from 20% to 30% — or a flash sale banner appears.</div>
+        </div>
+      </div>
+
+      <p>
+        All of these are content changes on a public URL. They are all detectable with a change monitoring API
+        and zero screen time on your part.
+      </p>
+
+      <hr class="divider" />
+
+      <h2>Why manual tracking breaks down</h2>
+
+      <p>
+        The typical approach is a Notion page titled "Competitive Pricing" with a table someone last updated
+        in Q3. This fails for predictable reasons:
+      </p>
+
+      <ul>
+        <li><strong>No one owns it.</strong> Competitive tracking is no one's primary job. It gets updated reactively — after a prospect mentions a competitor's new deal, not before.</li>
+        <li><strong>Weekly check cycles are too slow.</strong> A competitor can announce a pricing change and start winning the deals you're in simultaneously. By the time your weekly review happens, you've already lost three.</li>
+        <li><strong>Screenshot diffs require work.</strong> Even when someone does check, comparing last week's screenshot to this week's requires attention you rarely have.</li>
+        <li><strong>5 competitors × 2 pages each = 10 tabs to check weekly.</strong> Multiply by human inconsistency and it simply doesn't happen.</li>
+      </ul>
+
+      <div class="callout">
+        <p>
+          <strong>The benchmark:</strong> Klue customers report spending 4-6 hours per week on manual competitive
+          research before automation. Most of that is page-checking work a webhook can replace in 10 minutes of setup.
+        </p>
+      </div>
+
+      <hr class="divider" />
+
+      <h2>Setting up competitor pricing monitors with snapwatch</h2>
+
+      <p>
+        snapwatch monitors any URL for content changes on a configurable interval and fires a webhook the moment
+        something changes. The payload includes a text diff, a before screenshot, and an after screenshot —
+        everything your team needs to evaluate the change without visiting the page.
+      </p>
+
+      <div class="step-header">
+        <span class="step-num">1</span>
+        <span class="step-title">Map your competitor pages</span>
+      </div>
+
+      <p>
+        Start with your top five competitors. For each, collect two URLs: the main pricing page and any
+        public feature comparison page. If they have a separate enterprise pricing page, add that too.
+      </p>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="code-block-lang">csv</span>
+          <span class="code-block-label">competitors.csv</span>
+        </div>
+        <pre><span class="comment"># label,url</span>
+rival-a-pricing,https://rivalA.com/pricing
+rival-a-enterprise,https://rivalA.com/enterprise
+rival-b-pricing,https://rivalb.io/pricing
+rival-b-features,https://rivalb.io/features
+rival-c-pricing,https://competitor-c.com/plans
+rival-d-pricing,https://compD.co/pricing
+rival-e-pricing,https://rival-e.com/pricing/teams</pre>
+      </div>
+
+      <p>
+        Keep this file in your competitive intelligence repo. You will feed it to snapwatch in the next step.
+      </p>
+
+      <div class="step-header">
+        <span class="step-num">2</span>
+        <span class="step-title">Register one watch to verify the setup</span>
+      </div>
+
+      <p>
+        Start with a single competitor to verify the webhook is working before bulk-registering. Get your
+        API key from the <a href="../index.html#pricing" style="color:var(--accent);text-decoration:underline;text-underline-offset:2px">snapwatch free tier</a>
+        (no credit card required, 5 watches included).
+      </p>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="code-block-lang">bash</span>
+          <span class="code-block-label">register first competitor watch</span>
+        </div>
+        <pre>curl -X POST https://api.snapwatch.dev/watches \
+  -H <span class="string">"Authorization: Bearer YOUR_API_KEY"</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d <span class="string">'{
+    "url": "https://rivalA.com/pricing",
+    "label": "rival-a-pricing",
+    "interval": "60min",
+    "webhook_url": "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK",
+    "notify_on": ["content_change", "status_change"],
+    "screenshot": true
+  }'</span></pre>
+      </div>
+
+      <p>
+        The response returns a <code>watch_id</code> and a baseline snapshot URL. snapwatch immediately crawls
+        the page and stores a baseline — all future checks are diffed character-by-character against this baseline.
+        No false positives from dynamic elements like timestamps or ad impressions (those are normalized out).
+      </p>
+
+      <div class="step-header">
+        <span class="step-num">3</span>
+        <span class="step-title">Bulk-register all competitors</span>
+      </div>
+
+      <p>
+        Once the first watch fires correctly, register the rest from your CSV in one script run:
+      </p>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="code-block-lang">bash</span>
+          <span class="code-block-label">bulk-register-competitors.sh</span>
+        </div>
+        <pre><span class="comment">#!/bin/bash</span>
+<span class="comment"># Registers all competitor pages from competitors.csv</span>
+
+API_KEY=<span class="string">"YOUR_API_KEY"</span>
+SLACK_WEBHOOK=<span class="string">"https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"</span>
+
+<span class="keyword">while</span> IFS=<span class="string">','</span> read -r label url; <span class="keyword">do</span>
+  <span class="comment"># skip comments</span>
+  [[ <span class="string">"$label"</span> =~ ^# ]] &amp;&amp; <span class="keyword">continue</span>
+
+  response=$(curl -s -X POST https://api.snapwatch.dev/watches \
+    -H <span class="string">"Authorization: Bearer $API_KEY"</span> \
+    -H <span class="string">"Content-Type: application/json"</span> \
+    -d <span class="string">"{
+      \"url\": \"$url\",
+      \"label\": \"$label\",
+      \"interval\": \"60min\",
+      \"webhook_url\": \"$SLACK_WEBHOOK\",
+      \"notify_on\": [\"content_change\", \"status_change\"],
+      \"screenshot\": true
+    }"</span>)
+
+  watch_id=$(echo <span class="string">"$response"</span> | jq -r <span class="string">'.watch.id'</span>)
+  echo <span class="string">" Registered $label → watch_id: $watch_id"</span>
+<span class="keyword">done</span> &lt; competitors.csv</pre>
+      </div>
+
+      <p>
+        Run this once. snapwatch handles the rest. Each watch fires independently — if rival-a changes their
+        pricing at 2 AM on a Tuesday, you get the webhook at 2 AM on a Tuesday, not at your next scheduled review.
+      </p>
+
+      <div class="step-header">
+        <span class="step-num">4</span>
+        <span class="step-title">Handle the webhook and route to your team</span>
+      </div>
+
+      <p>
+        When a competitor changes their pricing page, snapwatch sends a POST to your webhook URL with a
+        structured JSON payload. Here is what a typical change event looks like, and how to forward it to Slack
+        with context your team can act on:
+      </p>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="code-block-lang">javascript</span>
+          <span class="code-block-label">webhook-handler.js (Node.js / Cloudflare Worker)</span>
+        </div>
+        <pre><span class="comment">// POST /webhooks/competitor-watch</span>
+<span class="keyword">export async function</span> <span class="fn">handleSnapwatchEvent</span>(req) {
+  <span class="keyword">const</span> event = <span class="keyword">await</span> req.json();
+
+  <span class="keyword">if</span> (event.event_type !== <span class="string">'changed'</span>) <span class="keyword">return</span>;
+
+  <span class="keyword">const</span> { label, url, diff_summary, screenshot_after_url } = event;
+
+  <span class="keyword">await</span> <span class="fn">postToSlack</span>({
+    text: <span class="string">`🔔 Competitor pricing change detected`</span>,
+    blocks: [
+      {
+        type: <span class="string">'section'</span>,
+        text: {
+          type: <span class="string">'mrkdwn'</span>,
+          text: <span class="string">`*Competitor pricing page changed*\n&lt;${url}|${label}&gt;`</span>
+        }
+      },
+      {
+        type: <span class="string">'section'</span>,
+        text: {
+          type: <span class="string">'mrkdwn'</span>,
+          text: <span class="string">`*What changed:*\n\`\`\`${diff_summary.slice(0, 500)}\`\`\``</span>
+        }
+      },
+      {
+        type: <span class="string">'actions'</span>,
+        elements: [
+          {
+            type: <span class="string">'button'</span>,
+            text: { type: <span class="string">'plain_text'</span>, text: <span class="string">'View screenshot'</span> },
+            url: screenshot_after_url
+          },
+          {
+            type: <span class="string">'button'</span>,
+            text: { type: <span class="string">'plain_text'</span>, text: <span class="string">'Open pricing page'</span> },
+            url: url
+          }
+        ]
+      }
+    ]
+  });
+}</pre>
+      </div>
+
+      <p>
+        The Slack message arrives with the full diff summary and a link to the "after" screenshot — your team
+        sees exactly what changed without leaving Slack. No dashboard to check, no manual comparison.
+      </p>
+
+      <hr class="divider" />
+
+      <h2>Advanced: target specific elements with CSS selectors</h2>
+
+      <p>
+        By default, snapwatch monitors the full page body. For pricing pages, you often want to filter to just
+        the pricing table section and ignore nav, footer, and marketing copy that changes frequently. Add a
+        <code>css_selector</code> to narrow the scope:
+      </p>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="code-block-lang">bash</span>
+          <span class="code-block-label">targeted selector — pricing table only</span>
+        </div>
+        <pre>curl -X POST https://api.snapwatch.dev/watches \
+  -H <span class="string">"Authorization: Bearer YOUR_API_KEY"</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d <span class="string">'{
+    "url": "https://rivalA.com/pricing",
+    "label": "rival-a-pricing-table",
+    "interval": "60min",
+    "webhook_url": "https://your.app/webhooks/competitor",
+    "css_selector": "#pricing-table, .pricing-grid, [data-testid=\"pricing\"]",
+    "screenshot": true
+  }'</span></pre>
+      </div>
+
+      <p>
+        Use your browser's DevTools to find the right selector for each competitor. Most pricing pages have
+        a clearly identifiable container. If you are unsure, start with the full-page monitor — you can always
+        add a selector later with a <code>PATCH /watches/{id}</code> call.
+      </p>
+
+      <hr class="divider" />
+
+      <h2>Build a weekly competitive pricing digest</h2>
+
+      <p>
+        The real-time webhook handles urgent changes. For your weekly product review, you probably also want
+        a summary of <em>all</em> pricing changes across all competitors for the past 7 days. The snapwatch
+        Events API returns a paginated log of all change events by watch:
+      </p>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="code-block-lang">javascript</span>
+          <span class="code-block-label">weekly-digest.js — generate a Slack summary of last 7 days</span>
+        </div>
+        <pre><span class="keyword">const</span> API_KEY = process.env.SNAPWATCH_API_KEY;
+<span class="keyword">const</span> SLACK_WEBHOOK = process.env.SLACK_DIGEST_WEBHOOK;
+
+<span class="keyword">async function</span> <span class="fn">weeklyCompetitorDigest</span>() {
+  <span class="keyword">const</span> since = <span class="keyword">new</span> <span class="fn">Date</span>(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  <span class="keyword">const</span> res = <span class="keyword">await</span> <span class="fn">fetch</span>(
+    <span class="string">`https://api.snapwatch.dev/events?since=${since}&event_type=changed`</span>,
+    { headers: { <span class="string">'Authorization'</span>: <span class="string">`Bearer ${API_KEY}`</span> } }
+  );
+  <span class="keyword">const</span> { events } = <span class="keyword">await</span> res.<span class="fn">json</span>();
+
+  <span class="keyword">if</span> (events.length === 0) {
+    <span class="keyword">return</span>; <span class="comment">// No competitor changes this week — no message needed</span>
+  }
+
+  <span class="keyword">const</span> lines = events.<span class="fn">map</span>(e =&gt;
+    <span class="string">`• *${e.label}* changed on ${new Date(e.detected_at).toLocaleDateString()}\n  ${e.url}`</span>
+  );
+
+  <span class="keyword">await</span> <span class="fn">fetch</span>(SLACK_WEBHOOK, {
+    method: <span class="string">'POST'</span>,
+    headers: { <span class="string">'Content-Type'</span>: <span class="string">'application/json'</span> },
+    body: <span class="fn">JSON.stringify</span>({
+      text: <span class="string">`*Weekly competitor pricing changes (${events.length} detected)*\n\n${lines.join('\n')}`</span>
+    })
+  });
+}
+
+<span class="comment">// Run weekly — e.g., add to a Monday 9 AM cron in your CI</span>
+<span class="fn">weeklyCompetitorDigest</span>();</pre>
+      </div>
+
+      <p>
+        Drop this in a GitHub Actions workflow on a Monday morning cron to get a weekly competitive pricing
+        briefing in Slack. The digest only sends if there were actual changes — zero noise weeks produce zero messages.
+      </p>
+
+      <hr class="divider" />
+
+      <h2>What your team gets</h2>
+
+      <p>
+        After this 10-minute setup, your product and GTM teams get:
+      </p>
+
+      <ul>
+        <li><strong>Real-time Slack alerts</strong> when any competitor pricing page changes — with a diff and screenshot</li>
+        <li><strong>Weekly digest</strong> summarizing all detected changes for the product review</li>
+        <li><strong>Zero manual checking</strong> — the 10 browser tabs are gone</li>
+        <li><strong>Actionable context</strong> per alert: what changed, when, on which competitor, with a link to the screenshot</li>
+        <li><strong>Audit trail</strong> in the Events API — query historical changes for any watch at any time</li>
+      </ul>
+
+      <div class="callout">
+        <p>
+          <strong>Pricing intelligence tip:</strong> Register your own pricing page as a watch too.
+          Verify that your own changes propagate correctly, and catch any CDN caching issues where old prices
+          stay live after a deploy.
+        </p>
+      </div>
+
+      <hr class="divider" />
+
+      <h2>Summary</h2>
+
+      <p>
+        Manually monitoring competitor pricing pages is a task that compounds with every competitor you add
+        and every team member who should be staying current. A webhook-first API replaces it with infrastructure
+        that runs in the background and pages your team only when something actually changes.
+      </p>
+
+      <ul>
+        <li>Register competitor pages as snapwatch watches — free tier covers 5 watches with hourly polling</li>
+        <li>Handle the structured webhook in any language and route it to Slack, Notion, or a Linear ticket</li>
+        <li>Add CSS selectors to target pricing tables and reduce false positives from footer or nav changes</li>
+        <li>Query the Events API for historical diffs and build a Monday morning digest automatically</li>
+      </ul>
+
+    </div><!-- /post-body -->
+
+    <!-- CTA -->
+    <div class="cta-box">
+      <h2>Start monitoring competitors today.</h2>
+      <p>
+        Free tier covers 5 competitor pages with hourly polling — no credit card, no infrastructure.
+        Set up in under 10 minutes.
+      </p>
+      <a href="../index.html#pricing" class="cta-btn">Get started free</a>
+      <p class="cta-free">Free tier: 5 watches, 60-min intervals, no credit card.</p>
+      <p class="cta-free" style="margin-top:8px"><a href="../docs.html" style="color:inherit;opacity:.7;text-decoration:underline;text-underline-offset:2px">See the full API reference →</a></p>
+    </div>
+
+    <!-- Crosslinks -->
+    <nav class="crosslinks" aria-label="Related articles">
+      <div class="crosslinks-title">Related reading</div>
+      <div class="crosslinks-list">
+        <a href="monitor-vendor-policy-changes.html">
+          Monitor Vendor Policy Changes for SOC 2 and GDPR Compliance
+          <span class="crosslink-arrow">→</span>
+        </a>
+        <a href="website-change-monitoring-api.html">
+          Website Change Monitoring API: Detect Page Changes with a Webhook
+          <span class="crosslink-arrow">→</span>
+        </a>
+        <a href="monitor-url-for-changes.html">
+          Monitor a URL for Changes: The Developer's Guide
+          <span class="crosslink-arrow">→</span>
+        </a>
+        <a href="webhook-on-page-change.html">
+          Trigger a Webhook When a Page Changes
+          <span class="crosslink-arrow">→</span>
+        </a>
+      </div>
+    </nav>
+
+  </article>
+</main>
+
+<!-- ─── Footer ───────────────────────────────────────────── -->
+<footer class="footer">
+  <p>
+    &copy; 2026 snapwatch &mdash;
+    <a href="../index.html">Home</a> &middot;
+    <a href="../docs.html">API Docs</a> &middot;
+    <a href="./index.html">Blog</a> &middot;
+    <a href="../index.html#pricing">Pricing</a>
+  </p>
+</footer>
+
+</body>
+</html>

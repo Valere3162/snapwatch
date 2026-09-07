@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Monitor Competitor Hiring Pages for Strategic Signals | snapwatch</title>
+  <meta name="description" content="Competitor job postings reveal strategy before press releases do. Automate hiring page monitoring with webhooks — know the moment a rival posts new roles, pivots headcount, or doubles down on a product area." />
+  <link rel="canonical" href="https://snapwatch.dev/blog/monitor-competitor-hiring-pages" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="How to Monitor Competitor Hiring Pages for Strategic Signals" />
+  <meta property="og:description" content="Job postings leak strategy. Automate competitor hiring page monitoring with snapwatch webhooks and surface signals before the press release." />
+  <meta property="og:url" content="https://snapwatch.dev/blog/monitor-competitor-hiring-pages" />
+  <meta property="og:site_name" content="snapwatch" />
+  <meta property="article:published_time" content="2026-09-07T00:00:00Z" />
+  <meta property="article:author" content="snapwatch" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="How to Monitor Competitor Hiring Pages for Strategic Signals" />
+  <meta name="twitter:description" content="Job postings reveal strategy. Automate monitoring of competitor careers pages and get a Slack alert the moment something changes." />
+
+  <!-- Schema.org Article -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "How to Monitor Competitor Hiring Pages for Strategic Signals",
+    "description": "Competitor job postings reveal strategy before press releases do. Automate hiring page monitoring with webhooks — know the moment a rival posts new roles, pivots headcount, or doubles down on a product area.",
+    "datePublished": "2026-09-07",
+    "author": { "@type": "Organization", "name": "snapwatch" },
+    "publisher": { "@type": "Organization", "name": "snapwatch", "url": "https://snapwatch.dev" },
+    "url": "https://snapwatch.dev/blog/monitor-competitor-hiring-pages"
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Mulish:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ─── Design tokens ─────────────────────────────────── */
+    :root {
+      --accent:      #FF8C00;
+      --accent-dim:  rgba(255, 140, 0, 0.12);
+      --accent-glow: rgba(255, 140, 0, 0.25);
+
+      --bg:          #080808;
+      --surface:     #111111;
+      --border:      #1E1E1E;
+      --border-hi:   #2A2A2A;
+
+      --text-hi:     #F0F0F0;
+      --text-lo:     #A0A0A0;
+      --text-xlo:    #5A5A5A;
+
+      --font-display: 'Syne', sans-serif;
+      --font-body:    'Mulish', sans-serif;
+      --font-mono:    'JetBrains Mono', monospace;
+
+      --content-w: 720px;
+      --radius:    6px;
+    }
+
+    /* ─── Reset ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text-hi);
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
+
+    /* ─── Nav ────────────────────────────────────────────── */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 56px;
+      background: rgba(8, 8, 8, 0.88);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--text-hi);
+      letter-spacing: -0.02em;
+    }
+    .nav-logo span { color: var(--accent); }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-lo);
+      transition: color 0.15s;
+    }
+    .nav-links a:hover { color: var(--text-hi); }
+    .nav-cta {
+      background: var(--accent);
+      color: #080808 !important;
+      padding: 6px 14px;
+      border-radius: var(--radius);
+      font-size: 13px !important;
+      font-weight: 700 !important;
+      transition: opacity 0.15s !important;
+    }
+    .nav-cta:hover { opacity: 0.88; color: #080808 !important; }
+
+    /* ─── Page shell ─────────────────────────────────────── */
+    .page {
+      max-width: var(--content-w);
+      margin: 0 auto;
+      padding: 64px 24px 120px;
+    }
+
+    /* ─── Post header ────────────────────────────────────── */
+    .post-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 10px;
+      border-radius: 999px;
+      margin-bottom: 24px;
+    }
+    .post-title {
+      font-family: var(--font-display);
+      font-size: clamp(26px, 4vw, 40px);
+      font-weight: 800;
+      line-height: 1.18;
+      letter-spacing: -0.03em;
+      color: var(--text-hi);
+      margin-bottom: 20px;
+    }
+    .post-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--text-xlo);
+      margin-bottom: 48px;
+      flex-wrap: wrap;
+    }
+    .post-meta-sep { color: var(--border-hi); }
+
+    /* ─── Divider ────────────────────────────────────────── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 40px 0;
+    }
+
+    /* ─── Body typography ────────────────────────────────── */
+    .post-body p {
+      color: var(--text-lo);
+      margin-bottom: 20px;
+      font-size: 15.5px;
+    }
+    .post-body p strong {
+      color: var(--text-hi);
+      font-weight: 600;
+    }
+    .post-body h2 {
+      font-family: var(--font-display);
+      font-size: clamp(18px, 2.5vw, 23px);
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--text-hi);
+      margin: 48px 0 16px;
+      line-height: 1.3;
+    }
+    .post-body h3 {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-hi);
+      margin: 32px 0 12px;
+    }
+    .post-body ul, .post-body ol {
+      color: var(--text-lo);
+      padding-left: 24px;
+      margin-bottom: 20px;
+      font-size: 15.5px;
+    }
+    .post-body li { margin-bottom: 8px; }
+    .post-body li strong { color: var(--text-hi); font-weight: 600; }
+    .post-body code {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--accent);
+    }
+
+    /* ─── Code blocks ─────────────────────────────────────── */
+    .code-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin: 24px 0;
+    }
+    .code-block-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+      background: #161616;
+    }
+    .code-block-lang {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .code-block-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-xlo);
+    }
+    .code-block pre {
+      padding: 20px;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.65;
+      color: #D4D4D4;
+    }
+    .code-block pre .keyword   { color: #569CD6; }
+    .code-block pre .string    { color: #CE9178; }
+    .code-block pre .comment   { color: #6A9955; font-style: italic; }
+    .code-block pre .number    { color: #B5CEA8; }
+    .code-block pre .property  { color: #9CDCFE; }
+    .code-block pre .fn        { color: #DCDCAA; }
+    .code-block pre .type      { color: #4EC9B0; }
+
+    /* ─── Info callout ────────────────────────────────────── */
+    .callout {
+      border-left: 3px solid var(--accent);
+      background: var(--accent-dim);
+      padding: 16px 20px;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin: 24px 0;
+    }
+    .callout p {
+      margin: 0;
+      font-size: 14.5px;
+      color: var(--text-lo);
+    }
+    .callout p strong { color: var(--text-hi); }
+
+    /* ─── Step header ─────────────────────────────────────── */
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin: 40px 0 16px;
+    }
+    .step-num {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #080808;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .step-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-hi);
+      letter-spacing: -0.02em;
+    }
+
+    /* ─── Signal grid ────────────────────────────────────── */
+    .signal-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin: 24px 0;
+    }
+    .signal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+    .signal-card-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+    .signal-card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-hi);
+      margin-bottom: 4px;
+    }
+    .signal-card-desc {
+      font-size: 13px;
+      color: var(--text-lo);
+      line-height: 1.5;
+    }
+
+    /* ─── CTA box ────────────────────────────────────────── */
+    .cta-box {
+      background: var(--surface);
+      border: 1px solid var(--border-hi);
+      border-radius: 10px;
+      padding: 36px;
+      text-align: center;
+      margin: 56px 0 0;
+    }
+    .cta-box h2 {
+      font-family: var(--font-display);
+      font-size: clamp(20px, 3vw, 26px);
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      color: var(--text-hi);
+      margin-bottom: 12px;
+    }
+    .cta-box p {
+      color: var(--text-lo);
+      font-size: 15px;
+      margin-bottom: 24px;
+    }
+    .cta-btn {
+      display: inline-block;
+      background: var(--accent);
+      color: #080808;
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 14px;
+      padding: 12px 28px;
+      border-radius: var(--radius);
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+    .cta-btn:hover { opacity: 0.88; }
+    .cta-free {
+      font-size: 13px;
+      color: var(--text-xlo);
+      margin-top: 12px;
+    }
+
+    /* ─── Crosslinks ─────────────────────────────────────── */
+    .crosslinks {
+      margin-top: 48px;
+      border-top: 1px solid var(--border);
+      padding-top: 32px;
+    }
+    .crosslinks-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-xlo);
+      margin-bottom: 16px;
+    }
+    .crosslinks-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .crosslinks-list a {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-lo);
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .crosslinks-list a:hover { color: var(--text-hi); border-color: var(--border-hi); }
+    .crosslink-arrow { color: var(--accent); flex-shrink: 0; margin-left: 16px; }
+
+    /* ─── Footer ─────────────────────────────────────────── */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 24px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-xlo);
+    }
+    .footer a { color: var(--text-lo); transition: color 0.15s; }
+    .footer a:hover { color: var(--text-hi); }
+  </style>
+</head>
+<body>
+
+<!-- ─── Nav ──────────────────────────────────────────────── -->
+<nav class="nav">
+  <a href="../index.html" class="nav-logo">snap<span>watch</span></a>
+  <ul class="nav-links">
+    <li><a href="../docs.html">Docs</a></li>
+    <li><a href="./index.html">Blog</a></li>
+    <li><a href="../index.html#pricing">Pricing</a></li>
+    <li><a href="../index.html#pricing" class="nav-cta">Get started free</a></li>
+  </ul>
+</nav>
+
+<!-- ─── Article ──────────────────────────────────────────── -->
+<main>
+  <article class="page">
+
+    <div class="post-label">Competitive Intelligence</div>
+
+    <h1 class="post-title">
+      How to Monitor Competitor Hiring Pages for Strategic Signals
+    </h1>
+
+    <div class="post-meta">
+      <span>snapwatch</span>
+      <span class="post-meta-sep">&middot;</span>
+      <span>September 7, 2026</span>
+      <span class="post-meta-sep">&middot;</span>
+      <span>8 min read</span>
+    </div>
+
+    <div class="post-body">
+
+      <p>
+        A competitor's pricing page tells you their current strategy. Their hiring page tells you their
+        <em>next</em> one. When a company quietly posts ten machine learning engineer roles in a single week,
+        they're building a product they haven't announced yet. When they stop hiring for a department, that
+        initiative is probably winding down.
+      </p>
+
+      <p>
+        Most companies know this intuitively, but the monitoring is manual: someone checks the careers page
+        every few weeks, scans it by eye, and reports back. By the time the signal reaches the team, it's
+        weeks old and the competitor has already made their move.
+      </p>
+
+      <p>
+        This guide shows you how to automate competitor hiring page monitoring with snapwatch — set up
+        watches on careers pages, receive webhook alerts the moment a new role appears or a batch of postings
+        is removed, and build a weekly digest that gives your team always-current intelligence.
+      </p>
+
+      <h2>Why Hiring Pages Are Intelligence Gold</h2>
+
+      <p>
+        Job postings are public, voluntary disclosures. Companies can't hide them. And because roles have to be
+        specific enough to attract candidates, they reveal far more than press releases do. A few signals to watch:
+      </p>
+
+      <div class="signal-grid">
+        <div class="signal-card">
+          <div class="signal-card-label">New product area</div>
+          <div class="signal-card-title">Cluster of new engineering roles</div>
+          <div class="signal-card-desc">5+ backend/ML/infra roles in one area = a new product is being built</div>
+        </div>
+        <div class="signal-card">
+          <div class="signal-card-label">Go-to-market pivot</div>
+          <div class="signal-card-title">First enterprise sales hire</div>
+          <div class="signal-card-desc">Moving from PLG to sales-led? Their first "Enterprise Account Executive" posting says so</div>
+        </div>
+        <div class="signal-card">
+          <div class="signal-card-label">Market expansion</div>
+          <div class="signal-card-title">Regional roles appear</div>
+          <div class="signal-card-desc">EMEA or APAC roles posted = international expansion underway</div>
+        </div>
+        <div class="signal-card">
+          <div class="signal-card-label">Financial signal</div>
+          <div class="signal-card-title">Mass posting after silence</div>
+          <div class="signal-card-desc">Sudden burst of 20+ openings usually follows a funding round</div>
+        </div>
+      </div>
+
+      <p>
+        The problem is timing. You need to catch these signals when they're fresh — not three weeks after
+        a competitor has already made ten hires and the market shift is obvious.
+      </p>
+
+      <h2>What Changes on a Careers Page</h2>
+
+      <p>
+        Before setting up monitors, it helps to know what you're watching for. Careers pages change in a few predictable ways:
+      </p>
+
+      <ul>
+        <li><strong>New job postings added</strong> — new text blocks, new links, new role titles appear in the DOM</li>
+        <li><strong>Roles removed</strong> — a posting is filled or cancelled; the link disappears</li>
+        <li><strong>Batch changes</strong> — multiple roles added or removed at once (often signals restructuring)</li>
+        <li><strong>Job description updates</strong> — salary bands, required skills, or level requirements quietly change</li>
+        <li><strong>New departments or teams</strong> — a new section heading appears on the careers index page</li>
+      </ul>
+
+      <p>
+        Most useful signals come from the careers <em>index</em> page (the list of all open roles), not from
+        individual job detail pages. That's the one URL to watch.
+      </p>
+
+      <h2>Step-by-Step: Automated Hiring Page Monitoring</h2>
+
+      <div class="step-header">
+        <div class="step-num">1</div>
+        <div class="step-title">Map your competitors' careers pages</div>
+      </div>
+
+      <p>
+        Build a CSV of competitors and their careers URLs. Most companies use one of a handful of ATS platforms,
+        so the URLs are predictable:
+      </p>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="code-block-lang">csv</span>
+          <span class="code-block-label">competitors.csv</span>
+        </div>
+        <pre>competitor,careers_url,ats
+Acme Corp,https://acme.com/careers,custom
+Rival Inc,https://boards.greenhouse.io/rivalinc,Greenhouse
+Startup Co,https://jobs.lever.co/startupco,Lever
+BigCo,https://bigco.wd3.myworkdayjobs.com/en-US/BigCo,Workday</pre>
+      </div>
+
+      <p>
+        Start with your top 5 competitors. You can expand to more later once the pipeline is running.
+        Greenhouse and Lever boards are especially useful because the job list page is a clean, structured HTML
+        page — low noise, easy to diff.
+      </p>
+
+      <div class="step-header">
+        <div class="step-num">2</div>
+        <div class="step-title">Register watches via the snapwatch API</div>
+      </div>
+
+      <p>
+        For each careers URL, create a watch. The free tier covers 5 watches with 60-minute polling — enough to
+        get started with your top competitors before upgrading.
+      </p>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="code-block-lang">bash</span>
+          <span class="code-block-label">Register a watch</span>
+        </div>
+        <pre>curl -X POST https://api.snapwatch.dev/v1/watches \
+  -H <span class="string">"Authorization: Bearer $SNAPWATCH_KEY"</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d <span class="string">'{
+    "url": "https://boards.greenhouse.io/rivalinc",
+    "label": "Rival Inc — Greenhouse",
+    "interval_minutes": 60,
+    "webhook_url": "https://your-server.com/webhooks/hiring",
+    "selector": ".job-post"
+  }'</span></pre>
+      </div>
+
+      <p>
+        The <code>selector</code> parameter tells snapwatch to extract only the job listing elements — not the
+        full page including headers, footers, and navigation. This dramatically reduces false positives from
+        unrelated page updates.
+      </p>
+
+      <div class="callout">
+        <p>
+          <strong>ATS-specific selectors:</strong> Greenhouse uses <code>.job-post</code> for each role card.
+          Lever uses <code>.posting</code>. Workday's DOM is more complex — try targeting the job count text first
+          (<code>.job-count</code> or the results heading) to detect any change, then dig in manually when
+          the alert fires.
+        </p>
+      </div>
+
+      <p>
+        To register all competitors in one script, loop over your CSV:
+      </p>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="code-block-lang">bash</span>
+          <span class="code-block-label">Bulk register from CSV</span>
+        </div>
+        <pre><span class="comment">#!/bin/bash</span>
+<span class="keyword">while</span> IFS=, <span class="keyword">read</span> -r competitor url ats; <span class="keyword">do</span>
+  <span class="keyword">echo</span> <span class="string">"Registering: $competitor"</span>
+  curl -s -X POST https://api.snapwatch.dev/v1/watches \
+    -H <span class="string">"Authorization: Bearer $SNAPWATCH_KEY"</span> \
+    -H <span class="string">"Content-Type: application/json"</span> \
+    -d <span class="string">"{
+      \"url\": \"$url\",
+      \"label\": \"$competitor\",
+      \"interval_minutes\": 60,
+      \"webhook_url\": \"https://your-server.com/webhooks/hiring\"
+    }"</span> | jq <span class="string">'.id, .label'</span>
+<span class="keyword">done</span> &lt; &lt;(tail -n +2 competitors.csv)
+</pre>
+      </div>
+
+      <div class="step-header">
+        <div class="step-num">3</div>
+        <div class="step-title">Handle the webhook payload</div>
+      </div>
+
+      <p>
+        When snapwatch detects a change, it fires a POST to your webhook URL with a structured payload.
+        The most useful fields are <code>label</code> (which competitor changed), <code>diff_added</code>
+        (new text that appeared), and <code>diff_removed</code> (text that disappeared).
+      </p>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="code-block-lang">javascript</span>
+          <span class="code-block-label">webhook-handler.js (Node/Express)</span>
+        </div>
+        <pre><span class="keyword">const</span> express = <span class="fn">require</span>(<span class="string">'express'</span>);
+<span class="keyword">const</span> app = <span class="fn">express</span>();
+app.<span class="fn">use</span>(express.<span class="fn">json</span>());
+
+app.<span class="fn">post</span>(<span class="string">'/webhooks/hiring'</span>, <span class="keyword">async</span> (req, res) =&gt; {
+  <span class="keyword">const</span> { label, url, diff_added, diff_removed, checked_at } = req.body;
+
+  <span class="comment">// Count approximate number of roles changed</span>
+  <span class="keyword">const</span> addedLines  = diff_added?.split(<span class="string">'\n'</span>).filter(<span class="fn">Boolean</span>).length ?? <span class="number">0</span>;
+  <span class="keyword">const</span> removedLines = diff_removed?.split(<span class="string">'\n'</span>).filter(<span class="fn">Boolean</span>).length ?? <span class="number">0</span>;
+
+  <span class="keyword">const</span> message = [
+    <span class="string">`*Hiring change: ${label}*`</span>,
+    <span class="string">`&lt;${url}|View careers page&gt;`</span>,
+    addedLines   &gt; <span class="number">0</span> ? <span class="string">`+${addedLines} lines added`</span>   : <span class="string">''</span>,
+    removedLines &gt; <span class="number">0</span> ? <span class="string">`-${removedLines} lines removed`</span> : <span class="string">''</span>,
+    <span class="string">`Detected: ${new Date(checked_at).toUTCString()}`</span>,
+  ].<span class="fn">filter</span>(Boolean).<span class="fn">join</span>(<span class="string">'\n'</span>);
+
+  <span class="keyword">await</span> <span class="fn">fetch</span>(process.env.SLACK_WEBHOOK, {
+    method: <span class="string">'POST'</span>,
+    headers: { <span class="string">'Content-Type'</span>: <span class="string">'application/json'</span> },
+    body: <span class="type">JSON</span>.<span class="fn">stringify</span>({ text: message }),
+  });
+
+  res.<span class="fn">sendStatus</span>(<span class="number">200</span>);
+});
+
+app.<span class="fn">listen</span>(<span class="number">3000</span>);
+</pre>
+      </div>
+
+      <div class="step-header">
+        <div class="step-num">4</div>
+        <div class="step-title">Enrich alerts with role context</div>
+      </div>
+
+      <p>
+        A raw "page changed" Slack alert isn't very useful. Add a second step: when you receive a webhook,
+        fetch the changed page and extract the role titles from the diff to give the alert real context.
+      </p>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="code-block-lang">javascript</span>
+          <span class="code-block-label">Extract role titles from diff</span>
+        </div>
+        <pre><span class="keyword">function</span> <span class="fn">extractRoleTitles</span>(diffText) {
+  <span class="comment">// Greenhouse job titles appear as: "Software Engineer, Backend"</span>
+  <span class="comment">// They're usually &lt;h2&gt; or &lt;a class="job-post"&gt; content</span>
+  <span class="keyword">const</span> lines = diffText?.split(<span class="string">'\n'</span>) ?? [];
+  <span class="keyword">return</span> lines
+    .<span class="fn">map</span>(l =&gt; l.<span class="fn">trim</span>())
+    .<span class="fn">filter</span>(l =&gt; l.<span class="fn">length</span> &gt; <span class="number">8</span> &amp;&amp; !l.<span class="fn">startsWith</span>(<span class="string">'&lt;'</span>) &amp;&amp; !l.<span class="fn">includes</span>(<span class="string">'http'</span>))
+    .<span class="fn">slice</span>(<span class="number">0</span>, <span class="number">5</span>); <span class="comment">// Cap at 5 titles per alert</span>
+}
+
+<span class="comment">// In your webhook handler:</span>
+<span class="keyword">const</span> addedRoles   = <span class="fn">extractRoleTitles</span>(diff_added);
+<span class="keyword">const</span> removedRoles = <span class="fn">extractRoleTitles</span>(diff_removed);
+
+<span class="keyword">const</span> blocks = [];
+<span class="keyword">if</span> (addedRoles.length) {
+  blocks.<span class="fn">push</span>({ type: <span class="string">'section'</span>, text: { type: <span class="string">'mrkdwn'</span>,
+    text: <span class="string">`*New roles posted:*\n${addedRoles.map(r =&gt; \`• \${r}\`).join('\n')}`</span>
+  }});
+}
+<span class="keyword">if</span> (removedRoles.length) {
+  blocks.<span class="fn">push</span>({ type: <span class="string">'section'</span>, text: { type: <span class="string">'mrkdwn'</span>,
+    text: <span class="string">`*Roles removed:*\n${removedRoles.map(r =&gt; \`• \${r}\`).join('\n')}`</span>
+  }});
+}
+</pre>
+      </div>
+
+      <div class="callout">
+        <p>
+          <strong>Pro tip:</strong> Route high-signal alerts (e.g., 10+ new roles in one change) to a dedicated
+          <code>#competitive-intel</code> Slack channel and low-signal alerts (1-2 role changes) to a lower-priority
+          digest thread. Filtering by <code>addedLines</code> count in the webhook handler makes this trivial.
+        </p>
+      </div>
+
+      <div class="step-header">
+        <div class="step-num">5</div>
+        <div class="step-title">Build a weekly hiring digest</div>
+      </div>
+
+      <p>
+        Real-time alerts catch urgent signals. A weekly digest gives your product and leadership teams a
+        standing summary of hiring trends across all competitors — who's growing where, who's pulling back.
+      </p>
+
+      <p>
+        Use the snapwatch Events API to pull all change events from the past 7 days and generate the digest:
+      </p>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="code-block-lang">javascript</span>
+          <span class="code-block-label">weekly-digest.js (runs via cron every Monday)</span>
+        </div>
+        <pre><span class="keyword">const</span> since = <span class="keyword">new</span> <span class="type">Date</span>(<span class="type">Date</span>.<span class="fn">now</span>() - <span class="number">7</span> * <span class="number">24</span> * <span class="number">60</span> * <span class="number">60</span> * <span class="number">1000</span>).<span class="fn">toISOString</span>();
+
+<span class="keyword">const</span> events = <span class="keyword">await</span> <span class="fn">fetch</span>(
+  <span class="string">`https://api.snapwatch.dev/v1/events?since=${since}&amp;tag=hiring`</span>,
+  { headers: { <span class="string">'Authorization'</span>: <span class="string">`Bearer ${process.env.SNAPWATCH_KEY}`</span> } }
+).<span class="fn">then</span>(r =&gt; r.<span class="fn">json</span>());
+
+<span class="comment">// Group events by competitor label</span>
+<span class="keyword">const</span> byCompetitor = events.<span class="fn">reduce</span>((acc, ev) =&gt; {
+  acc[ev.label] ??= { added: <span class="number">0</span>, removed: <span class="number">0</span>, events: <span class="number">0</span> };
+  acc[ev.label].added   += ev.diff_added_lines   ?? <span class="number">0</span>;
+  acc[ev.label].removed += ev.diff_removed_lines ?? <span class="number">0</span>;
+  acc[ev.label].events++;
+  <span class="keyword">return</span> acc;
+}, {});
+
+<span class="keyword">const</span> lines = <span class="type">Object</span>.<span class="fn">entries</span>(byCompetitor)
+  .<span class="fn">sort</span>(([,a],[,b]) =&gt; (b.added - b.removed) - (a.added - a.removed))
+  .<span class="fn">map</span>(([label, data]) =&gt;
+    <span class="string">`• *${label}*: +${data.added} / -${data.removed} lines (${data.events} change events)`</span>
+  );
+
+<span class="keyword">await</span> <span class="fn">fetch</span>(process.env.SLACK_WEBHOOK, {
+  method: <span class="string">'POST'</span>,
+  headers: { <span class="string">'Content-Type'</span>: <span class="string">'application/json'</span> },
+  body: <span class="type">JSON</span>.<span class="fn">stringify</span>({
+    text: <span class="string">`*Weekly hiring intel — week of ${since.slice(0,10)}*\n\n`</span> + lines.<span class="fn">join</span>(<span class="string">'\n'</span>),
+  }),
+});
+</pre>
+      </div>
+
+      <h2>Scaling to More Competitors</h2>
+
+      <p>
+        Once you've validated the setup with 3-5 competitors, scaling is straightforward. The Starter plan
+        supports 50 watches with 15-minute polling intervals. At that cadence you'll catch hiring changes
+        within minutes of them going live.
+      </p>
+
+      <p>
+        A few patterns that work well at scale:
+      </p>
+
+      <ul>
+        <li><strong>Tag watches by tier</strong> — use the <code>label</code> field to include a tier prefix
+        (e.g., "Tier 1: Acme Corp") so your digest and webhook handlers can route differently by priority</li>
+        <li><strong>Watch both the index and individual team pages</strong> — some companies have separate
+        Engineering, Sales, and Design pages. Watch each separately to get department-level signals</li>
+        <li><strong>Monitor your own page too</strong> — verify your own postings go live correctly and catch
+        ATS issues before candidates do</li>
+        <li><strong>Add context from LinkedIn</strong> — when a batch of roles appears, cross-reference
+        the competitor's LinkedIn headcount growth for confirmation</li>
+      </ul>
+
+      <hr class="divider" />
+
+      <h2>Summary</h2>
+
+      <p>
+        Competitor hiring pages are one of the highest-signal public intelligence sources available — and they
+        update constantly. Manual monitoring loses most of the signal through lag; automated webhook monitoring
+        captures it in real time.
+      </p>
+
+      <ul>
+        <li>Register competitor careers pages as snapwatch watches, one per company (free tier: 5 watches)</li>
+        <li>Use <code>selector</code> to isolate job listing elements and reduce noise from nav/footer changes</li>
+        <li>Parse the webhook's <code>diff_added</code> and <code>diff_removed</code> fields to extract role titles</li>
+        <li>Route high-volume changes to an alert channel; collect everything in a Monday morning digest</li>
+        <li>Expand to 50+ competitors on the Starter plan with 15-minute polling</li>
+      </ul>
+
+    </div><!-- /post-body -->
+
+    <!-- CTA -->
+    <div class="cta-box">
+      <h2>Start monitoring competitor hiring today.</h2>
+      <p>
+        Free tier covers 5 careers pages with hourly polling — no credit card, no infrastructure.
+        Set up in under 10 minutes.
+      </p>
+      <a href="../index.html#pricing" class="cta-btn">Get started free</a>
+      <p class="cta-free">Free tier: 5 watches, 60-min intervals, no credit card.</p>
+      <p class="cta-free" style="margin-top:8px"><a href="../docs.html" style="color:inherit;opacity:.7;text-decoration:underline;text-underline-offset:2px">See the full API reference &rarr;</a></p>
+    </div>
+
+    <!-- Crosslinks -->
+    <nav class="crosslinks" aria-label="Related articles">
+      <div class="crosslinks-title">Related reading</div>
+      <div class="crosslinks-list">
+        <a href="monitor-competitor-pricing-pages.html">
+          How to Monitor Competitor Pricing Pages for Changes
+          <span class="crosslink-arrow">&rarr;</span>
+        </a>
+        <a href="website-change-monitoring-api.html">
+          Website Change Monitoring API: Detect Page Changes with a Webhook
+          <span class="crosslink-arrow">&rarr;</span>
+        </a>
+        <a href="monitor-url-for-changes.html">
+          Monitor a URL for Changes: The Developer's Guide
+          <span class="crosslink-arrow">&rarr;</span>
+        </a>
+        <a href="webhook-on-page-change.html">
+          Trigger a Webhook When a Page Changes
+          <span class="crosslink-arrow">&rarr;</span>
+        </a>
+      </div>
+    </nav>
+
+  </article>
+</main>
+
+<!-- ─── Footer ───────────────────────────────────────────── -->
+<footer class="footer">
+  <p>
+    &copy; 2026 snapwatch &mdash;
+    <a href="../index.html">Home</a> &middot;
+    <a href="../docs.html">API Docs</a> &middot;
+    <a href="./index.html">Blog</a> &middot;
+    <a href="../index.html#pricing">Pricing</a>
+  </p>
+</footer>
+
+</body>
+</html>
