@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Website Change Monitoring API: Detect Page Changes with a Webhook | snapwatch</title>
+  <meta name="description" content="Stop writing cron jobs. Use a webhook-first API to monitor any URL for changes and receive an instant notification with a diff and screenshot when it does." />
+  <link rel="canonical" href="https://snapwatch.dev/blog/website-change-monitoring-api" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Website Change Monitoring API: Detect Page Changes with a Webhook" />
+  <meta property="og:description" content="Stop writing cron jobs. Use a webhook-first API to monitor any URL for changes and receive an instant notification with a diff and screenshot when it does." />
+  <meta property="og:url" content="https://snapwatch.dev/blog/website-change-monitoring-api" />
+  <meta property="og:site_name" content="snapwatch" />
+  <meta property="article:published_time" content="2026-09-01T00:00:00Z" />
+  <meta property="article:author" content="snapwatch" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Website Change Monitoring API: Detect Page Changes with a Webhook" />
+  <meta name="twitter:description" content="Stop writing cron jobs. Use a webhook-first API to monitor any URL for changes and receive an instant notification with a diff and screenshot when it does." />
+
+  <!-- Schema.org Article -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Website Change Monitoring API: Detect Page Changes with a Webhook",
+    "description": "Stop writing cron jobs. Use a webhook-first API to monitor any URL for changes and receive an instant notification with a diff and screenshot when it does.",
+    "datePublished": "2026-09-01",
+    "author": { "@type": "Organization", "name": "snapwatch" },
+    "publisher": { "@type": "Organization", "name": "snapwatch", "url": "https://snapwatch.dev" },
+    "url": "https://snapwatch.dev/blog/website-change-monitoring-api"
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Mulish:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ─── Design tokens ─────────────────────────────────── */
+    :root {
+      --accent:      #FF8C00;
+      --accent-dim:  rgba(255, 140, 0, 0.12);
+      --accent-glow: rgba(255, 140, 0, 0.25);
+
+      --bg:          #080808;
+      --surface:     #111111;
+      --border:      #1E1E1E;
+      --border-hi:   #2A2A2A;
+
+      --text-hi:     #F0F0F0;
+      --text-lo:     #A0A0A0;
+      --text-xlo:    #5A5A5A;
+
+      --font-display: 'Syne', sans-serif;
+      --font-body:    'Mulish', sans-serif;
+      --font-mono:    'JetBrains Mono', monospace;
+
+      --content-w: 720px;
+      --radius:    6px;
+    }
+
+    /* ─── Reset ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text-hi);
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
+
+    /* ─── Nav ────────────────────────────────────────────── */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 56px;
+      background: rgba(8, 8, 8, 0.88);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--text-hi);
+      letter-spacing: -0.02em;
+    }
+    .nav-logo span { color: var(--accent); }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-lo);
+      transition: color 0.15s;
+    }
+    .nav-links a:hover { color: var(--text-hi); }
+    .nav-cta {
+      background: var(--accent);
+      color: #080808 !important;
+      padding: 6px 14px;
+      border-radius: var(--radius);
+      font-size: 13px !important;
+      font-weight: 700 !important;
+      transition: opacity 0.15s !important;
+    }
+    .nav-cta:hover { opacity: 0.88; color: #080808 !important; }
+
+    /* ─── Page shell ─────────────────────────────────────── */
+    .page {
+      max-width: var(--content-w);
+      margin: 0 auto;
+      padding: 64px 24px 120px;
+    }
+
+    /* ─── Post header ────────────────────────────────────── */
+    .post-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 10px;
+      border-radius: 999px;
+      margin-bottom: 24px;
+    }
+    .post-title {
+      font-family: var(--font-display);
+      font-size: clamp(26px, 4vw, 40px);
+      font-weight: 800;
+      line-height: 1.18;
+      letter-spacing: -0.03em;
+      color: var(--text-hi);
+      margin-bottom: 20px;
+    }
+    .post-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--text-xlo);
+      margin-bottom: 48px;
+      flex-wrap: wrap;
+    }
+    .post-meta-sep { color: var(--border-hi); }
+
+    /* ─── Divider ────────────────────────────────────────── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 40px 0;
+    }
+
+    /* ─── Body typography ────────────────────────────────── */
+    .post-body p {
+      color: var(--text-lo);
+      margin-bottom: 20px;
+      font-size: 15.5px;
+    }
+    .post-body p strong {
+      color: var(--text-hi);
+      font-weight: 600;
+    }
+    .post-body h2 {
+      font-family: var(--font-display);
+      font-size: clamp(18px, 2.5vw, 23px);
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--text-hi);
+      margin: 48px 0 16px;
+      line-height: 1.3;
+    }
+    .post-body h3 {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-hi);
+      margin: 32px 0 12px;
+    }
+    .post-body ul,
+    .post-body ol {
+      padding-left: 0;
+      list-style: none;
+      margin-bottom: 20px;
+    }
+    .post-body ul li,
+    .post-body ol li {
+      position: relative;
+      padding-left: 20px;
+      color: var(--text-lo);
+      font-size: 15.5px;
+      margin-bottom: 8px;
+    }
+    .post-body ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .post-body ol {
+      counter-reset: ol-counter;
+    }
+    .post-body ol li {
+      counter-increment: ol-counter;
+    }
+    .post-body ol li::before {
+      content: counter(ol-counter) ".";
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .post-body a {
+      color: var(--accent);
+      border-bottom: 1px solid var(--accent-glow);
+      transition: border-color 0.15s;
+    }
+    .post-body a:hover { border-color: var(--accent); }
+
+    /* ─── Inline code ────────────────────────────────────── */
+    .post-body code {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 1px 6px;
+      border-radius: 4px;
+      color: var(--text-hi);
+    }
+
+    /* ─── Code blocks ────────────────────────────────────── */
+    .code-block {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border-hi);
+      border-radius: var(--radius);
+      margin: 24px 0;
+      overflow: hidden;
+    }
+    .code-block-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+    }
+    .code-block-lang {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-xlo);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .code-block-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-xlo);
+    }
+    .code-block pre {
+      padding: 20px 20px;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--text-hi);
+    }
+    .code-block pre .comment { color: var(--text-xlo); }
+    .code-block pre .keyword { color: var(--accent); }
+    .code-block pre .string  { color: #98C379; }
+    .code-block pre .number  { color: #D19A66; }
+    .code-block pre .prop    { color: #61AFEF; }
+
+    /* ─── Callout ────────────────────────────────────────── */
+    .callout {
+      display: flex;
+      gap: 14px;
+      background: var(--accent-dim);
+      border: 1px solid var(--accent-glow);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin: 28px 0;
+    }
+    .callout-icon {
+      font-size: 18px;
+      line-height: 1.75;
+      flex-shrink: 0;
+    }
+    .callout p {
+      margin: 0 !important;
+      font-size: 14.5px !important;
+      color: var(--text-hi) !important;
+    }
+
+    /* ─── Use-case card grid ─────────────────────────────── */
+    .usecase-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin: 24px 0;
+    }
+    .usecase-card {
+      background: var(--surface);
+      border: 1px solid var(--border-hi);
+      border-radius: var(--radius);
+      padding: 18px 16px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .usecase-card:hover {
+      border-color: var(--accent-glow);
+      background: rgba(255, 140, 0, 0.04);
+    }
+    .usecase-icon {
+      font-size: 22px;
+      margin-bottom: 10px;
+    }
+    .usecase-title {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-hi);
+      margin-bottom: 6px;
+    }
+    .usecase-desc {
+      font-size: 13px;
+      color: var(--text-lo);
+      line-height: 1.55;
+    }
+
+    /* ─── Comparison table ───────────────────────────────── */
+    .comparison-table-wrap {
+      overflow-x: auto;
+      margin: 24px 0;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-hi);
+    }
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .comparison-table th {
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-xlo);
+      background: var(--surface);
+      padding: 12px 18px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-hi);
+    }
+    .comparison-table th:not(:first-child) { text-align: center; }
+    .comparison-table td {
+      padding: 13px 18px;
+      color: var(--text-lo);
+      border-bottom: 1px solid var(--border);
+    }
+    .comparison-table td:not(:first-child) { text-align: center; }
+    .comparison-table tr:last-child td { border-bottom: none; }
+    .comparison-table tr:hover td { background: rgba(255,255,255,0.015); }
+    .comparison-table .col-snap { color: var(--accent); font-weight: 600; }
+    .check { color: var(--accent); font-weight: 700; }
+    .cross { color: var(--text-xlo); }
+    .row-label { color: var(--text-hi); font-weight: 500; }
+
+    /* ─── CTA box ────────────────────────────────────────── */
+    .cta-box {
+      background: var(--surface);
+      border: 1px solid var(--border-hi);
+      border-radius: 10px;
+      padding: 36px 32px;
+      text-align: center;
+      margin: 52px 0 0;
+    }
+    .cta-box h2 {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--accent);
+      margin-bottom: 12px;
+      letter-spacing: -0.025em;
+    }
+    .cta-box p {
+      font-size: 15px;
+      color: var(--text-lo);
+      max-width: 460px;
+      margin: 0 auto 24px;
+    }
+    .cta-btn {
+      display: inline-block;
+      background: var(--accent);
+      color: #080808;
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 700;
+      padding: 11px 26px;
+      border-radius: var(--radius);
+      transition: opacity 0.15s;
+    }
+    .cta-btn:hover { opacity: 0.88; }
+    .cta-free {
+      margin-top: 12px;
+      font-size: 12.5px;
+      color: var(--text-xlo);
+    }
+
+    /* ─── Crosslinks ─────────────────────────────────────── */
+    .crosslinks {
+      margin: 52px 0 0;
+    }
+    .crosslinks-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-xlo);
+      margin-bottom: 14px;
+    }
+    .crosslinks-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .crosslinks-list a {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-lo);
+      border-bottom: 1px solid var(--border);
+      transition: color 0.15s, background 0.15s;
+    }
+    .crosslinks-list a:last-child { border-bottom: none; }
+    .crosslinks-list a:hover {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .crosslink-arrow {
+      opacity: 0.4;
+      font-size: 16px;
+      transition: opacity 0.15s, transform 0.15s;
+    }
+    .crosslinks-list a:hover .crosslink-arrow {
+      opacity: 1;
+      transform: translateX(3px);
+    }
+
+    /* ─── Footer ─────────────────────────────────────────── */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 24px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-xlo);
+    }
+    .footer a {
+      color: var(--text-xlo);
+      border-bottom: 1px solid transparent;
+      transition: color 0.15s;
+    }
+    .footer a:hover { color: var(--text-lo); }
+
+    /* ─── Responsive ─────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .page { padding: 40px 16px 80px; }
+      .nav { padding: 0 16px; }
+      .cta-box { padding: 28px 20px; }
+      .usecase-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ─── Nav ──────────────────────────────────────────────── -->
+  <nav class="nav" aria-label="Site navigation">
+    <a href="../index.html" class="nav-logo">snap<span>watch</span></a>
+    <ul class="nav-links">
+      <li><a href="./index.html">Blog</a></li>
+      <li><a href="../index.html#pricing" class="nav-cta">Start Free</a></li>
+    </ul>
+  </nav>
+
+  <!-- ─── Article ──────────────────────────────────────────── -->
+  <main class="page" role="main">
+    <article itemscope itemtype="https://schema.org/TechArticle">
+
+      <header>
+        <div class="post-label">API Guide</div>
+        <h1 class="post-title" itemprop="headline">
+          Website Change Monitoring API: Detect Page Changes with a Webhook
+        </h1>
+        <div class="post-meta">
+          <span itemprop="author">snapwatch</span>
+          <span class="post-meta-sep">|</span>
+          <time datetime="2026-09-01" itemprop="datePublished">Sep 2026</time>
+          <span class="post-meta-sep">|</span>
+          <span>7 min read</span>
+        </div>
+      </header>
+
+      <hr class="divider" />
+
+      <div class="post-body" itemprop="articleBody">
+
+        <p>
+          Engineers building competitor intelligence tools, compliance automation, or content aggregators
+          all share the same underlying problem: <strong>you need to know when a web page changes.</strong>
+          The traditional answer is a cron job that polls the URL, fetches the HTML, hashes it, compares
+          against a stored value, and fires a notification. The modern answer is a webhook-first API that
+          does all of that for you — in a single POST request.
+        </p>
+
+        <p>
+          This guide walks through both approaches so you can see exactly what you are replacing, then
+          shows how to wire up <a href="https://snapwatch.dev">snapwatch</a> to start receiving change
+          webhooks in minutes.
+        </p>
+
+        <!-- ─── Section 1 ──────────────────────────────────── -->
+        <h2>The polling problem: ~80 lines you do not need to write</h2>
+
+        <p>
+          The DIY path looks simple at first. Fetch a URL, hash the content, compare. But by the time
+          you handle errors, retries, storage, deduplication, and notification delivery, you have a
+          small service to maintain. Here is what that typically looks like:
+        </p>
+
+        <div class="code-block">
+          <div class="code-block-header">
+            <span class="code-block-lang">Node.js</span>
+            <span class="code-block-label">DIY approach — the code you skip</span>
+          </div>
+          <pre><span class="comment">// package deps: node-cron, node-fetch, crypto, nodemailer (or Slack SDK)</span>
+<span class="keyword">import</span> cron <span class="keyword">from</span> <span class="string">'node-cron'</span>;
+<span class="keyword">import</span> fetch <span class="keyword">from</span> <span class="string">'node-fetch'</span>;
+<span class="keyword">import</span> crypto <span class="keyword">from</span> <span class="string">'node:crypto'</span>;
+<span class="keyword">import</span> fs <span class="keyword">from</span> <span class="string">'node:fs'</span>;
+
+<span class="keyword">const</span> <span class="prop">WATCH_URL</span> = <span class="string">'https://example.com/pricing'</span>;
+<span class="keyword">const</span> <span class="prop">HASH_FILE</span> = <span class="string">'./last-hash.txt'</span>;
+<span class="keyword">const</span> <span class="prop">WEBHOOK</span>  = process.env.<span class="prop">NOTIFY_WEBHOOK</span>;
+
+<span class="keyword">function</span> <span class="prop">hash</span>(str) {
+  <span class="keyword">return</span> crypto.createHash(<span class="string">'sha256'</span>).update(str).digest(<span class="string">'hex'</span>);
+}
+
+<span class="keyword">async function</span> <span class="prop">checkPage</span>() {
+  <span class="keyword">try</span> {
+    <span class="keyword">const</span> res  = <span class="keyword">await</span> fetch(<span class="prop">WATCH_URL</span>, { timeout: <span class="number">10000</span> });
+    <span class="keyword">if</span> (!res.ok) <span class="keyword">throw new</span> Error(<span class="string">`HTTP </span>${res.status}<span class="string">`</span>);
+    <span class="keyword">const</span> body = <span class="keyword">await</span> res.text();
+    <span class="keyword">const</span> current = hash(body);
+
+    <span class="keyword">let</span> previous = <span class="string">''</span>;
+    <span class="keyword">if</span> (fs.existsSync(<span class="prop">HASH_FILE</span>)) {
+      previous = fs.readFileSync(<span class="prop">HASH_FILE</span>, <span class="string">'utf8'</span>).trim();
+    }
+
+    <span class="keyword">if</span> (current !== previous) {
+      fs.writeFileSync(<span class="prop">HASH_FILE</span>, current);
+      <span class="keyword">await</span> notify(<span class="prop">WATCH_URL</span>, previous, current);
+    }
+  } <span class="keyword">catch</span> (err) {
+    console.error(<span class="string">'Poll failed:'</span>, err.message);
+    <span class="comment">// TODO: retry logic, dead-letter queue, alerting on repeated failure</span>
+  }
+}
+
+<span class="keyword">async function</span> <span class="prop">notify</span>(url, oldHash, newHash) {
+  <span class="keyword">await</span> fetch(<span class="prop">WEBHOOK</span>, {
+    method: <span class="string">'POST'</span>,
+    headers: { <span class="string">'Content-Type'</span>: <span class="string">'application/json'</span> },
+    body: JSON.stringify({
+      message: <span class="string">`Page changed: </span>${url}<span class="string">`</span>,
+      old_hash: oldHash,
+      new_hash: newHash,
+      <span class="comment">// no diff, no screenshot, no content summary</span>
+    }),
+  });
+}
+
+<span class="comment">// Run every 15 minutes — but this needs to stay alive 24/7</span>
+cron.schedule(<span class="string">'*/15 * * * *'</span>, checkPage);
+console.log(<span class="string">'Watcher running...'</span>);</pre>
+        </div>
+
+        <p>
+          This works until it does not. The process needs to stay alive. You need persistent storage for
+          hashes. You get no diff of what changed, no screenshot, no retry budget, and no way to manage
+          multiple watched URLs without turning this into a proper application. That is the polling trap.
+        </p>
+
+        <div class="callout">
+          <div class="callout-icon">&#9888;</div>
+          <p>
+            Hash comparison only tells you <em>something</em> changed. It tells you nothing about
+            <em>what</em> changed — a single cookie banner update looks identical to a price change
+            in your diff logic.
+          </p>
+        </div>
+
+        <!-- ─── Section 2 ──────────────────────────────────── -->
+        <h2>The API approach: one JSON object, one webhook</h2>
+
+        <p>
+          A website change monitoring API inverts the model. Instead of you polling and storing state,
+          you register a watch once, and the API calls you when something changes. The infrastructure
+          — distributed polling, deduplication, diff extraction, screenshot capture — lives on the API side.
+        </p>
+
+        <p>
+          The key properties of a good change monitoring API:
+        </p>
+
+        <ul>
+          <li><strong>Webhook-first</strong> — push, not pull. No polling loop in your codebase.</li>
+          <li><strong>Structured diffs</strong> — know what changed, not just that it changed.</li>
+          <li><strong>Screenshots on change</strong> — visual confirmation alongside the diff.</li>
+          <li><strong>Configurable intervals</strong> — check every minute or every day, your choice.</li>
+          <li><strong>Managed retries</strong> — the API handles transient failures, not your code.</li>
+        </ul>
+
+        <!-- ─── Section 3 ──────────────────────────────────── -->
+        <h2>Setting up a watch with the snapwatch API</h2>
+
+        <p>
+          Registering a watch is a single POST to <code>/watches</code>. You provide the URL to monitor,
+          the webhook endpoint to notify, and how often to check.
+        </p>
+
+        <h3>curl</h3>
+
+        <div class="code-block">
+          <div class="code-block-header">
+            <span class="code-block-lang">bash</span>
+            <span class="code-block-label">Register a watch</span>
+          </div>
+          <pre>curl -X POST https://api.snapwatch.dev/watches \
+  -H <span class="string">"Authorization: Bearer YOUR_API_KEY"</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d <span class="string">'{
+    "url": "https://competitor.com/pricing",
+    "webhook_url": "https://yourapp.com/webhooks/snapwatch",
+    "check_interval_minutes": 60,
+    "label": "Competitor pricing page"
+  }'</span></pre>
+        </div>
+
+        <p>
+          The API responds with a <code>watch_id</code> you can use to pause, update, or delete the
+          watch later. That is all the setup required.
+        </p>
+
+        <h3>Node.js</h3>
+
+        <div class="code-block">
+          <div class="code-block-header">
+            <span class="code-block-lang">JavaScript</span>
+            <span class="code-block-label">Full example — register + handle webhook</span>
+          </div>
+          <pre><span class="comment">// 1. Register the watch (run once, e.g. in a setup script)</span>
+<span class="keyword">const</span> res = <span class="keyword">await</span> fetch(<span class="string">'https://api.snapwatch.dev/watches'</span>, {
+  method: <span class="string">'POST'</span>,
+  headers: {
+    <span class="string">'Authorization'</span>: <span class="string">`Bearer </span>${process.env.<span class="prop">SNAPWATCH_API_KEY</span>}<span class="string">`</span>,
+    <span class="string">'Content-Type'</span>: <span class="string">'application/json'</span>,
+  },
+  body: JSON.stringify({
+    url:                    <span class="string">'https://competitor.com/pricing'</span>,
+    webhook_url:            <span class="string">'https://yourapp.com/webhooks/snapwatch'</span>,
+    check_interval_minutes: <span class="number">60</span>,
+    label:                  <span class="string">'Competitor pricing page'</span>,
+  }),
+});
+
+<span class="keyword">const</span> { watch_id } = <span class="keyword">await</span> res.json();
+console.log(<span class="string">'Watch created:'</span>, watch_id);
+
+<span class="comment">// 2. Handle the inbound webhook (Express / Hono / whatever)</span>
+app.post(<span class="string">'/webhooks/snapwatch'</span>, <span class="keyword">async</span> (req, res) =&gt; {
+  <span class="keyword">const</span> event = req.body;
+
+  <span class="keyword">if</span> (event.event_type === <span class="string">'changed'</span>) {
+    <span class="keyword">await</span> notifyTeam({
+      url:        event.url,
+      summary:    event.diff_summary,
+      screenshot: event.screenshot_url,
+    });
+  }
+
+  res.sendStatus(<span class="number">200</span>);
+});</pre>
+        </div>
+
+        <!-- ─── Section 4 ──────────────────────────────────── -->
+        <h2>The webhook payload you receive</h2>
+
+        <p>
+          When snapwatch detects a change, it delivers a signed POST to your <code>webhook_url</code>.
+          The payload includes a structured diff summary and a URL to the before/after screenshots:
+        </p>
+
+        <div class="code-block">
+          <div class="code-block-header">
+            <span class="code-block-lang">JSON</span>
+            <span class="code-block-label">Inbound webhook payload</span>
+          </div>
+          <pre>{
+  <span class="prop">"event_type"</span>:     <span class="string">"changed"</span>,
+  <span class="prop">"watch_id"</span>:       <span class="string">"wch_01j9z3k4m5n6p7q8"</span>,
+  <span class="prop">"label"</span>:          <span class="string">"Competitor pricing page"</span>,
+  <span class="prop">"url"</span>:            <span class="string">"https://competitor.com/pricing"</span>,
+  <span class="prop">"checked_at"</span>:     <span class="string">"2026-09-04T14:22:31Z"</span>,
+  <span class="prop">"diff_summary"</span>: {
+    <span class="prop">"added_text"</span>:   [<span class="string">"New: Enterprise plan at $299/mo"</span>],
+    <span class="prop">"removed_text"</span>: [<span class="string">"Business plan at $199/mo"</span>],
+    <span class="prop">"change_score"</span>: <span class="number">0.12</span>,
+    <span class="prop">"sections_changed"</span>: [<span class="string">"pricing-table"</span>, <span class="string">"faq"</span>]
+  },
+  <span class="prop">"screenshot_url"</span>:  <span class="string">"https://cdn.snapwatch.dev/screenshots/wch_01j9z.before-after.png"</span>,
+  <span class="prop">"before_snapshot"</span>: <span class="string">"https://cdn.snapwatch.dev/snapshots/wch_01j9z.2026-09-03.html.gz"</span>,
+  <span class="prop">"after_snapshot"</span>:  <span class="string">"https://cdn.snapwatch.dev/snapshots/wch_01j9z.2026-09-04.html.gz"</span>
+}</pre>
+        </div>
+
+        <div class="callout">
+          <div class="callout-icon">&#9432;</div>
+          <p>
+            Every webhook is signed with an <code>X-Snapwatch-Signature</code> HMAC header so you can
+            verify the payload came from snapwatch and was not tampered with.
+          </p>
+        </div>
+
+        <!-- ─── Section 5 ──────────────────────────────────── -->
+        <h2>Use cases</h2>
+
+        <p>
+          Any workflow that depends on detecting an external web page changing is a candidate. The most
+          common patterns we see:
+        </p>
+
+        <div class="usecase-grid">
+          <div class="usecase-card">
+            <div class="usecase-icon">&#128200;</div>
+            <div class="usecase-title">Competitor pricing</div>
+            <p class="usecase-desc">Get notified the moment a competitor changes their pricing page or plan structure.</p>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-icon">&#128188;</div>
+            <div class="usecase-title">Job listings</div>
+            <p class="usecase-desc">Detect new roles at target companies faster than any jobs aggregator.</p>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-icon">&#128196;</div>
+            <div class="usecase-title">Regulatory filings</div>
+            <p class="usecase-desc">Monitor government or regulatory pages for new guidance, rules, or filings.</p>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-icon">&#9989;</div>
+            <div class="usecase-title">SLA compliance</div>
+            <p class="usecase-desc">Verify a vendor's status page or SLA terms have not changed without notice.</p>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-icon">&#128240;</div>
+            <div class="usecase-title">Content monitoring</div>
+            <p class="usecase-desc">Track news sources, product pages, or partner sites for updates.</p>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-icon">&#128268;</div>
+            <div class="usecase-title">API endpoint monitoring</div>
+            <p class="usecase-desc">Detect schema or response changes on undocumented or third-party APIs.</p>
+          </div>
+        </div>
+
+        <!-- ─── Section 6 ──────────────────────────────────── -->
+        <h2>DIY polling vs. snapwatch: a direct comparison</h2>
+
+        <div class="comparison-table-wrap">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th>DIY cron + fetch</th>
+                <th class="col-snap">snapwatch API</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="row-label">Lines of code to write</td>
+                <td>~80–120</td>
+                <td class="col-snap check">~10</td>
+              </tr>
+              <tr>
+                <td class="row-label">Infrastructure needed</td>
+                <td>Always-on server or cron service</td>
+                <td class="col-snap check">None</td>
+              </tr>
+              <tr>
+                <td class="row-label">Structured diff of changes</td>
+                <td class="cross">No — just a hash mismatch</td>
+                <td class="col-snap check">Yes</td>
+              </tr>
+              <tr>
+                <td class="row-label">Screenshot on change</td>
+                <td class="cross">No</td>
+                <td class="col-snap check">Yes — before &amp; after</td>
+              </tr>
+              <tr>
+                <td class="row-label">Managed retries &amp; error handling</td>
+                <td class="cross">You build it</td>
+                <td class="col-snap check">Built in</td>
+              </tr>
+              <tr>
+                <td class="row-label">Multiple watches</td>
+                <td>More code per URL</td>
+                <td class="col-snap check">One API, unlimited watches</td>
+              </tr>
+              <tr>
+                <td class="row-label">Delivery reliability</td>
+                <td>Depends on your uptime</td>
+                <td class="col-snap check">99.9% SLA + webhook retry</td>
+              </tr>
+              <tr>
+                <td class="row-label">Time to first notification</td>
+                <td>Days of setup</td>
+                <td class="col-snap check">Under 5 minutes</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ─── Section 7 ──────────────────────────────────── -->
+        <h2>Getting started for free</h2>
+
+        <p>
+          snapwatch has a free tier that covers 5 active watches checked every 60 minutes — no credit
+          card required. If you need more watches, higher frequency, or longer retention, the paid plans
+          start at $19/mo.
+        </p>
+
+        <ol>
+          <li>Sign up at <a href="https://snapwatch.dev">snapwatch.dev</a> and grab your API key.</li>
+          <li>POST to <code>/watches</code> with your URL and webhook endpoint.</li>
+          <li>Deploy your webhook handler — any public HTTP endpoint works.</li>
+          <li>Receive your first change notification within the first check interval.</li>
+        </ol>
+
+        <p>
+          If you want to start without a deployed webhook, use a service like
+          <a href="https://webhook.site" rel="noopener noreferrer" target="_blank">webhook.site</a>
+          to inspect the first few payloads before wiring up your real handler.
+        </p>
+
+      </div><!-- /.post-body -->
+
+      <!-- ─── CTA box ──────────────────────────────────────── -->
+      <div class="cta-box">
+        <h2>Stop polling. Start watching.</h2>
+        <p>
+          Register your first watch in under 5 minutes. Free tier included —
+          no infrastructure, no cron jobs.
+        </p>
+        <a href="../index.html#pricing" class="cta-btn">Get started free</a>
+        <p class="cta-free">Free tier: 5 watches, 60-min intervals, no credit card.</p>
+      </div>
+
+      <!-- ─── Cross-links ──────────────────────────────────── -->
+      <nav class="crosslinks" aria-label="Related articles">
+        <div class="crosslinks-title">Related reading</div>
+        <div class="crosslinks-list">
+          <a href="./monitor-url-for-changes.html">
+            How to Monitor a URL for Changes
+            <span class="crosslink-arrow">&#8594;</span>
+          </a>
+          <a href="./webhook-on-page-change.html">
+            Get a Webhook When a Page Changes
+            <span class="crosslink-arrow">&#8594;</span>
+          </a>
+          <a href="https://shot.dev/blog/competitor-screenshot-tracking" rel="noopener noreferrer" target="_blank">
+            Build a Competitor Screenshot Tracker (shot.dev)
+            <span class="crosslink-arrow">&#8594;</span>
+          </a>
+        </div>
+      </nav>
+
+    </article>
+  </main>
+
+  <!-- ─── Footer ───────────────────────────────────────────── -->
+  <footer class="footer">
+    <p>
+      &copy; 2026 snapwatch &mdash;
+      <a href="../index.html">Home</a> &middot;
+      <a href="./index.html">Blog</a> &middot;
+      <a href="../index.html#pricing">Pricing</a>
+    </p>
+  </footer>
+
+</body>
+</html>
