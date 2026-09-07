@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>snapwatch API Reference — Endpoints, Webhooks, and SDK Examples</title>
+  <meta name="description" content="Complete API reference for snapwatch. Authentication, endpoint specs, webhook payloads, retry logic, and SDK examples in curl, Node.js, and Python." />
+  <link rel="canonical" href="https://snapwatch.dev/docs" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="snapwatch API Reference" />
+  <meta property="og:description" content="Complete API reference for snapwatch: endpoints, webhooks, retry logic, and SDK examples." />
+  <meta property="og:url" content="https://snapwatch.dev/docs" />
+  <meta property="og:site_name" content="snapwatch" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="snapwatch API Reference" />
+  <meta name="twitter:description" content="Complete reference for snapwatch endpoints, webhook events, and SDK examples." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Mulish:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --accent:      #FF8C00;
+      --accent-dim:  rgba(255,140,0,0.10);
+      --accent-glow: rgba(255,140,0,0.22);
+      --bg:          #080808;
+      --surface:     #111111;
+      --surface-2:   #161616;
+      --border:      #1E1E1E;
+      --border-hi:   #2A2A2A;
+      --text-hi:     #F0F0F0;
+      --text-lo:     #A0A0A0;
+      --text-xlo:    #5A5A5A;
+      --green:       #4CAF73;
+      --red:         #E05252;
+      --blue:        #61AFEF;
+      --font-display: 'Syne', sans-serif;
+      --font-body:    'Mulish', sans-serif;
+      --font-mono:    'JetBrains Mono', monospace;
+      --content-w:    780px;
+      --radius:       6px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text-hi);
+      font-family: var(--font-body);
+      font-size: 15.5px;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* NAV */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 56px;
+      background: rgba(8,8,8,0.9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-left { display: flex; align-items: center; gap: 14px; }
+    .nav-logo {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--text-hi);
+      letter-spacing: -0.02em;
+    }
+    .nav-logo span { color: var(--accent); }
+    .nav-sep { color: var(--border-hi); font-size: 20px; }
+    .nav-page-name {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-xlo);
+      letter-spacing: 0.04em;
+    }
+    .nav-links { display: flex; align-items: center; gap: 18px; list-style: none; }
+    .nav-links a {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-lo);
+      transition: color 0.15s;
+    }
+    .nav-links a:hover { color: var(--text-hi); }
+    .nav-cta {
+      background: var(--accent);
+      color: #080808 !important;
+      padding: 6px 14px;
+      border-radius: var(--radius);
+      font-size: 13px !important;
+      font-weight: 700 !important;
+    }
+    .nav-cta:hover { opacity: 0.88; }
+
+    /* LAYOUT */
+    .docs-layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      max-width: 1100px;
+      margin: 0 auto;
+      min-height: calc(100vh - 56px);
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      position: sticky;
+      top: 56px;
+      height: calc(100vh - 56px);
+      overflow-y: auto;
+      padding: 32px 0 48px;
+      border-right: 1px solid var(--border);
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+    .sidebar-section {
+      margin-bottom: 28px;
+    }
+    .sidebar-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-xlo);
+      padding: 0 20px;
+      margin-bottom: 8px;
+    }
+    .sidebar-link {
+      display: block;
+      padding: 6px 20px;
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--text-lo);
+      border-left: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    .sidebar-link:hover {
+      color: var(--text-hi);
+      background: var(--accent-dim);
+      border-left-color: var(--accent);
+    }
+    .sidebar-method {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 3px;
+      margin-right: 5px;
+      min-width: 40px;
+      text-align: center;
+    }
+    .method-get  { background: rgba(97,175,239,0.12); color: var(--blue); }
+    .method-post { background: rgba(76,175,115,0.12); color: var(--green); }
+    .method-patch { background: rgba(255,140,0,0.12); color: var(--accent); }
+    .method-delete { background: rgba(224,82,82,0.12); color: var(--red); }
+
+    /* CONTENT */
+    .docs-content {
+      padding: 48px 48px 120px;
+      max-width: 780px;
+    }
+
+    /* PAGE HEADER */
+    .docs-hero-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 14px;
+    }
+    .docs-hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(26px, 4vw, 38px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--text-hi);
+      margin-bottom: 14px;
+      line-height: 1.15;
+    }
+    .docs-hero p {
+      font-size: 16px;
+      color: var(--text-lo);
+      line-height: 1.7;
+      margin-bottom: 32px;
+    }
+    .docs-meta {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      font-size: 13px;
+      color: var(--text-xlo);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 0;
+      margin-bottom: 52px;
+    }
+    .docs-meta span { display: flex; align-items: center; gap: 6px; }
+    .docs-meta code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: var(--surface);
+      padding: 1px 6px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      color: var(--accent);
+    }
+
+    /* SECTION HEADINGS */
+    .docs-section {
+      margin-bottom: 64px;
+    }
+    .docs-section h2 {
+      font-family: var(--font-display);
+      font-size: clamp(18px, 2.5vw, 24px);
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      color: var(--text-hi);
+      margin-bottom: 16px;
+      padding-top: 16px;
+    }
+    .docs-section h3 {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-hi);
+      margin: 32px 0 12px;
+    }
+    .docs-section p {
+      color: var(--text-lo);
+      font-size: 15px;
+      margin-bottom: 16px;
+      line-height: 1.75;
+    }
+    .docs-section p strong { color: var(--text-hi); font-weight: 600; }
+    .docs-section ul,
+    .docs-section ol {
+      padding-left: 0;
+      list-style: none;
+      margin-bottom: 16px;
+    }
+    .docs-section ul li,
+    .docs-section ol li {
+      position: relative;
+      padding-left: 18px;
+      color: var(--text-lo);
+      font-size: 15px;
+      margin-bottom: 6px;
+    }
+    .docs-section ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 9px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .docs-section a {
+      color: var(--accent);
+      border-bottom: 1px solid var(--accent-glow);
+      transition: border-color 0.15s;
+    }
+    .docs-section a:hover { border-color: var(--accent); }
+
+    /* DIVIDER */
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 0 0 52px;
+    }
+
+    /* ENDPOINT BLOCK */
+    .endpoint-block {
+      background: var(--surface);
+      border: 1px solid var(--border-hi);
+      border-radius: var(--radius);
+      margin-bottom: 40px;
+      overflow: hidden;
+    }
+    .endpoint-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-2);
+    }
+    .endpoint-method {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 4px;
+      min-width: 60px;
+      text-align: center;
+    }
+    .endpoint-path {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-hi);
+    }
+    .endpoint-desc {
+      font-size: 13.5px;
+      color: var(--text-lo);
+      padding: 14px 18px 0;
+    }
+    .endpoint-body {
+      padding: 0 18px 18px;
+    }
+
+    /* INLINE CODE */
+    code {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 1px 6px;
+      border-radius: 4px;
+      color: var(--text-hi);
+    }
+
+    /* CODE BLOCK */
+    .code-block {
+      background: var(--surface);
+      border: 1px solid var(--border-hi);
+      border-radius: var(--radius);
+      margin: 16px 0;
+      overflow: hidden;
+    }
+    .code-block-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+    }
+    .code-lang {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 500;
+      color: var(--text-xlo);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .code-label { font-size: 11px; font-weight: 600; color: var(--text-xlo); }
+    .code-block pre {
+      padding: 16px 18px;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 1.65;
+      color: var(--text-hi);
+    }
+    .code-block pre .c  { color: var(--text-xlo); }   /* comment */
+    .code-block pre .k  { color: var(--accent); }     /* keyword */
+    .code-block pre .s  { color: #98C379; }            /* string */
+    .code-block pre .n  { color: #D19A66; }            /* number */
+    .code-block pre .p  { color: var(--blue); }        /* property */
+    .code-block pre .m  { color: var(--green); }       /* method */
+
+    /* PARAMS TABLE */
+    .params-table-wrap {
+      overflow-x: auto;
+      margin: 16px 0;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-hi);
+    }
+    .params-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+    .params-table th {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-xlo);
+      background: var(--surface-2);
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-hi);
+    }
+    .params-table td {
+      padding: 10px 14px;
+      color: var(--text-lo);
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    .params-table tr:last-child td { border-bottom: none; }
+    .params-table tr:hover td { background: rgba(255,255,255,0.015); }
+    .param-name { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-hi); }
+    .param-type { font-family: var(--font-mono); font-size: 11.5px; color: var(--blue); }
+    .param-req  { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
+    .param-opt  { font-family: var(--font-mono); font-size: 11px; color: var(--text-xlo); }
+    .status-2xx { color: var(--green); font-family: var(--font-mono); font-size: 12px; font-weight: 700; }
+    .status-4xx { color: var(--red); font-family: var(--font-mono); font-size: 12px; font-weight: 700; }
+
+    /* CALLOUT */
+    .callout {
+      display: flex;
+      gap: 12px;
+      background: var(--accent-dim);
+      border: 1px solid var(--accent-glow);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      margin: 20px 0;
+    }
+    .callout-icon { font-size: 16px; line-height: 1.75; flex-shrink: 0; }
+    .callout p { margin: 0 !important; font-size: 14px !important; color: var(--text-hi) !important; }
+
+    /* EVENT BADGE */
+    .event-badge {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-right: 6px;
+    }
+    .event-changed  { background: rgba(76,175,115,0.12); color: var(--green); border: 1px solid rgba(76,175,115,0.25); }
+    .event-blocked  { background: rgba(224,82,82,0.12); color: var(--red); border: 1px solid rgba(224,82,82,0.25); }
+    .event-error    { background: rgba(255,140,0,0.12); color: var(--accent); border: 1px solid rgba(255,140,0,0.25); }
+    .event-digest   { background: rgba(97,175,239,0.12); color: var(--blue); border: 1px solid rgba(97,175,239,0.25); }
+
+    /* RETRY TIMELINE */
+    .retry-timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      border: 1px solid var(--border-hi);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin: 16px 0;
+    }
+    .retry-row {
+      display: grid;
+      grid-template-columns: 80px 1fr 1fr;
+      padding: 10px 16px;
+      font-size: 13.5px;
+      border-bottom: 1px solid var(--border);
+      align-items: center;
+    }
+    .retry-row:last-child { border-bottom: none; }
+    .retry-row:first-child { background: var(--surface-2); font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-xlo); }
+    .retry-row:not(:first-child) { color: var(--text-lo); }
+    .retry-row:hover:not(:first-child) { background: rgba(255,255,255,0.015); }
+
+    /* FOOTER */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 24px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-xlo);
+    }
+    .footer a { color: var(--text-xlo); transition: color 0.15s; }
+    .footer a:hover { color: var(--text-lo); }
+
+    /* RESPONSIVE */
+    @media (max-width: 760px) {
+      .docs-layout { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .docs-content { padding: 32px 20px 80px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav" aria-label="Site navigation">
+  <div class="nav-left">
+    <a href="index.html" class="nav-logo">snap<span>watch</span></a>
+    <span class="nav-sep">/</span>
+    <span class="nav-page-name">API Reference</span>
+  </div>
+  <ul class="nav-links">
+    <li><a href="blog/index.html">Blog</a></li>
+    <li><a href="index.html#pricing" class="nav-cta">Start Free</a></li>
+  </ul>
+</nav>
+
+<div class="docs-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" aria-label="API navigation">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Getting Started</div>
+      <a href="#overview" class="sidebar-link">Overview</a>
+      <a href="#authentication" class="sidebar-link">Authentication</a>
+      <a href="#errors" class="sidebar-link">Errors</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Endpoints</div>
+      <a href="#get-health" class="sidebar-link"><span class="sidebar-method method-get">GET</span>/health</a>
+      <a href="#get-watches" class="sidebar-link"><span class="sidebar-method method-get">GET</span>/watches</a>
+      <a href="#post-watches" class="sidebar-link"><span class="sidebar-method method-post">POST</span>/watches</a>
+      <a href="#get-watch" class="sidebar-link"><span class="sidebar-method method-get">GET</span>/watches/:id</a>
+      <a href="#patch-watch" class="sidebar-link"><span class="sidebar-method method-patch">PATCH</span>/watches/:id</a>
+      <a href="#delete-watch" class="sidebar-link"><span class="sidebar-method method-delete">DELETE</span>/watches/:id</a>
+      <a href="#get-history" class="sidebar-link"><span class="sidebar-method method-get">GET</span>/history</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Data Models</div>
+      <a href="#watch-object" class="sidebar-link">Watch</a>
+      <a href="#diffevent-object" class="sidebar-link">DiffEvent</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Webhooks</div>
+      <a href="#webhook-events" class="sidebar-link">Event Types</a>
+      <a href="#webhook-delivery" class="sidebar-link">Delivery &amp; Retry</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Rate Limits</div>
+      <a href="#rate-limits" class="sidebar-link">Limits</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">SDK Examples</div>
+      <a href="#sdk-curl" class="sidebar-link">curl</a>
+      <a href="#sdk-node" class="sidebar-link">Node.js</a>
+      <a href="#sdk-python" class="sidebar-link">Python</a>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="docs-content">
+
+    <!-- HERO -->
+    <header class="docs-hero">
+      <div class="docs-hero-label">API REFERENCE</div>
+      <h1>snapwatch API</h1>
+      <p>Monitor any URL for changes. Receive a structured webhook with a diff and screenshot the moment something changes. No cron jobs, no infrastructure — one POST to register a watch.</p>
+      <div class="docs-meta">
+        <span>Base URL <code>https://api.snapwatch.dev</code></span>
+        <span>Version <code>1.0</code></span>
+        <span>Format <code>JSON</code></span>
+        <span>Auth <code>Bearer token</code></span>
+      </div>
+    </header>
+
+    <!-- OVERVIEW -->
+    <section class="docs-section" id="overview">
+      <h2>Overview</h2>
+      <p>Snapwatch monitors web pages for content changes and delivers real-time webhook notifications when something changes. You configure a <strong>watch</strong> — a URL, a delivery endpoint, and an optional CSS selector — and snapwatch handles the scheduled checks, content diffing, screenshot capture, and webhook delivery with retry logic.</p>
+      <p>Common use cases:</p>
+      <ul>
+        <li>Monitor competitor pricing pages and receive an alert when text changes.</li>
+        <li>Track government or regulatory pages for policy updates.</li>
+        <li>Watch job boards, product pages, or news sources without manual refreshing.</li>
+        <li>Build internal alerting pipelines by piping snapwatch webhooks into Slack, PagerDuty, or custom backends.</li>
+      </ul>
+    </section>
+    <hr class="section-divider" />
+
+    <!-- AUTHENTICATION -->
+    <section class="docs-section" id="authentication">
+      <h2>Authentication</h2>
+      <p>Every authenticated endpoint requires a Bearer token in the <code>Authorization</code> header. API keys are provisioned at account creation and are linked to a plan (<code>starter</code> or <code>pro</code>).</p>
+      <p><strong>Key format:</strong> <code>sw_live_</code> followed by 32 hex characters.</p>
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="code-lang">HTTP</span>
+          <span class="code-label">Authorization header</span>
+        </div>
+        <pre>Authorization: Bearer sw_live_4a8f2c91b3e70d56a1f9c82b4e371d08</pre>
+      </div>
+      <div class="callout">
+        <div class="callout-icon">&#9888;</div>
+        <p>Keys are stored as SHA-256 hashes on the server. The raw key is shown <strong>once</strong> at creation and cannot be retrieved afterwards. If you lose your key, rotate to a new one via the dashboard.</p>
+      </div>
+      <h3>Plans and limits</h3>
+      <div class="params-table-wrap">
+        <table class="params-table">
+          <thead><tr><th>Plan</th><th>Watch limit</th><th>Min check interval</th></tr></thead>
+          <tbody>
+            <tr><td class="param-name">Starter</td><td>50 watches</td><td>5 minutes</td></tr>
+            <tr><td class="param-name">Pro</td><td>500 watches</td><td>5 minutes</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <hr class="section-divider" />
+
+    <!-- ERRORS -->
+    <section class="docs-section" id="errors">
+      <h2>Errors</h2>
+      <p>All errors return a consistent JSON body with an <code>error</code> field.</p>
+      <div class="code-block">
+        <div class="code-block-header"><span class="code-lang">JSON</span><span class="code-label">Error shape</span></div>
+        <pre>{ <span class="p">"error"</span>: <span class="s">"Watch not found"</span> }</pre>
+      </div>
+      <div class="params-table-wrap">
+        <table class="params-table">
+          <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><span class="status-4xx">400</span></td><td>Bad request — missing or invalid field</td></tr>
+            <tr><td><span class="status-4xx">401</span></td><td>Unauthorized — missing, malformed, or invalid API key</td></tr>
+            <tr><td><span class="status-4xx">404</span></td><td>Not found — resource doesn't exist or belongs to another account</td></tr>
+            <tr><td><span class="status-4xx">409</span></td><td>Conflict — a watch for this URL already exists on your account</td></tr>
+            <tr><td><span class="status-4xx">422</span></td><td>Unprocessable — field value fails business validation</td></tr>
+            <tr><td><span class="status-4xx">429</span></td><td>Too many watches — watch limit reached for your plan</td></tr>
+            <tr><td><span class="status-4xx">500</span></td><td>Internal server error — unexpected failure on snapwatch's side</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <hr class="section-divider" />
+
+    <!-- ENDPOINTS -->
+    <section class="docs-section" id="endpoints">
+      <h2>Endpoints</h2>
+
+      <!-- GET /health -->
+      <div class="endpoint-block" id="get-health">
+        <div class="endpoint-header">
+          <span class="endpoint-method method-get">GET</span>
+          <span class="endpoint-path">/health</span>
+        </div>
+        <div class="endpoint-desc">Public endpoint. No authentication required. Use to verify the API is reachable.</div>
+        <div class="endpoint-body">
+          <h3>Response <span class="status-2xx">200</span></h3>
+          <div class="code-block">
+            <div class="code-block-header"><span class="code-lang">JSON</span></div>
+            <pre>{ <span class="p">"status"</span>: <span class="s">"ok"</span>, <span class="p">"ts"</span>: <span class="s">"2026-09-07T14:32:00.000Z"</span> }</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET /watches -->
+      <div class="endpoint-block" id="get-watches">
+        <div class="endpoint-header">
+          <span class="endpoint-method method-get">GET</span>
+          <span class="endpoint-path">/watches</span>
+        </div>
+        <div class="endpoint-desc">List all watches on your account, ordered by creation date descending.</div>
+        <div class="endpoint-body">
+          <h3>Response <span class="status-2xx">200</span></h3>
+          <div class="code-block">
+            <div class="code-block-header"><span class="code-lang">JSON</span></div>
+            <pre>{
+  <span class="p">"watches"</span>: [{
+    <span class="p">"id"</span>:                     <span class="s">"019234ab-cdef-7890-1234-56789abcdef0"</span>,
+    <span class="p">"url"</span>:                    <span class="s">"https://example.com/pricing"</span>,
+    <span class="p">"webhook_url"</span>:            <span class="s">"https://hooks.yourapp.com/snapwatch"</span>,
+    <span class="p">"css_selector"</span>:           <span class="s">"#pricing-table"</span>,
+    <span class="p">"check_interval_minutes"</span>: <span class="n">60</span>,
+    <span class="p">"last_checked_at"</span>:        <span class="s">"2026-09-07T14:00:00.000Z"</span>,
+    <span class="p">"check_status"</span>:           <span class="s">"active"</span>,
+    <span class="p">"created_at"</span>:             <span class="s">"2026-09-01T09:15:00.000Z"</span>
+  }],
+  <span class="p">"count"</span>: <span class="n">1</span>
+}</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- POST /watches -->
+      <div class="endpoint-block" id="post-watches">
+        <div class="endpoint-header">
+          <span class="endpoint-method method-post">POST</span>
+          <span class="endpoint-path">/watches</span>
+        </div>
+        <div class="endpoint-desc">Create a new watch. An initial check is enqueued immediately after creation.</div>
+        <div class="endpoint-body">
+          <h3>Request body</h3>
+          <div class="params-table-wrap">
+            <table class="params-table">
+              <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td class="param-name">url</td>
+                  <td class="param-type">string</td>
+                  <td class="param-req">Yes</td>
+                  <td>—</td>
+                  <td>Absolute URL to monitor. Must include scheme (<code>https://</code>).</td>
+                </tr>
+                <tr>
+                  <td class="param-name">webhook_url</td>
+                  <td class="param-type">string</td>
+                  <td class="param-req">Yes</td>
+                  <td>—</td>
+                  <td>Absolute URL where change notifications are delivered via POST.</td>
+                </tr>
+                <tr>
+                  <td class="param-name">check_interval_minutes</td>
+                  <td class="param-type">integer</td>
+                  <td class="param-opt">No</td>
+                  <td><code>60</code></td>
+                  <td>How often to check the page. Minimum: <code>5</code>.</td>
+                </tr>
+                <tr>
+                  <td class="param-name">css_selector</td>
+                  <td class="param-type">string</td>
+                  <td class="param-opt">No</td>
+                  <td><code>null</code></td>
+                  <td>Limit change detection to the element matching this CSS selector. If omitted, monitors the full page body.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="code-block">
+            <div class="code-block-header"><span class="code-lang">JSON</span><span class="code-label">Example request</span></div>
+            <pre>{
+  <span class="p">"url"</span>:                    <span class="s">"https://acme.com/pricing"</span>,
+  <span class="p">"webhook_url"</span>:            <span class="s">"https://hooks.yourapp.com/snapwatch"</span>,
+  <span class="p">"check_interval_minutes"</span>: <span class="n">30</span>,
+  <span class="p">"css_selector"</span>:           <span class="s">"#pricing-table"</span>
+}</pre>
+          </div>
+          <h3>Response <span class="status-2xx">201</span></h3>
+          <div class="code-block">
+            <div class="code-block-header"><span class="code-lang">JSON</span></div>
+            <pre>{ <span class="p">"watch"</span>: { <span class="p">"id"</span>: <span class="s">"019234ab-..."</span>, <span class="p">"check_status"</span>: <span class="s">"active"</span>, <span class="c">/* ... */</span> } }</pre>
+          </div>
+          <h3>Error responses</h3>
+          <div class="params-table-wrap">
+            <table class="params-table">
+              <thead><tr><th>Status</th><th>Condition</th></tr></thead>
+              <tbody>
+                <tr><td><span class="status-4xx">400</span></td><td><code>url</code> or <code>webhook_url</code> missing or not a valid absolute URL</td></tr>
+                <tr><td><span class="status-4xx">409</span></td><td>A watch for this exact <code>url</code> already exists on your account</td></tr>
+                <tr><td><span class="status-4xx">429</span></td><td>Watch limit reached for your plan</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET /watches/:id -->
+      <div class="endpoint-block" id="get-watch">
+        <div class="endpoint-header">
+          <span class="endpoint-method method-get">GET</span>
+          <span class="endpoint-path">/watches/:id</span>
+        </div>
+        <div class="endpoint-desc">Retrieve a single watch by ID.</div>
+        <div class="endpoint-body">
+          <h3>Response <span class="status-2xx">200</span></h3>
+          <div class="code-block">
+            <div class="code-block-header"><span class="code-lang">JSON</span></div>
+            <pre>{ <span class="p">"watch"</span>: { <span class="p">"id"</span>: <span class="s">"019234ab-..."</span>, <span class="p">"check_status"</span>: <span class="s">"active"</span>, <span class="c">/* ... */</span> } }</pre>
+          </div>
+          <h3>Error responses</h3>
+          <div class="params-table-wrap">
+            <table class="params-table">
+              <thead><tr><th>Status</th><th>Condition</th></tr></thead>
+              <tbody><tr><td><span class="status-4xx">404</span></td><td>Watch not found or belongs to a different account</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATCH /watches/:id -->
+      <div class="endpoint-block" id="patch-watch">
+        <div class="endpoint-header">
+          <span class="endpoint-method method-patch">PATCH</span>
+          <span class="endpoint-path">/watches/:id</span>
+        </div>
+        <div class="endpoint-desc">Update one or more fields on an existing watch. Send only the fields you want to change. Sending an empty body returns <code>400</code>.</div>
+        <div class="endpoint-body">
+          <h3>Updatable fields</h3>
+          <div class="params-table-wrap">
+            <table class="params-table">
+              <thead><tr><th>Field</th><th>Type</th><th>Constraints</th></tr></thead>
+              <tbody>
+                <tr><td class="param-name">webhook_url</td><td class="param-type">string</td><td>Must be a valid absolute URL</td></tr>
+                <tr><td class="param-name">check_interval_minutes</td><td class="param-type">integer</td><td>Minimum: 5</td></tr>
+                <tr><td class="param-name">css_selector</td><td class="param-type">string | null</td><td>Pass <code>null</code> to remove selector and monitor full page</td></tr>
+                <tr><td class="param-name">check_status</td><td class="param-type">string</td><td>Only <code>"active"</code> or <code>"paused"</code> accepted</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="code-block">
+            <div class="code-block-header"><span class="code-lang">JSON</span><span class="code-label">Pause a watch</span></div>
+            <pre>{ <span class="p">"check_status"</span>: <span class="s">"paused"</span> }</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- DELETE /watches/:id -->
+      <div class="endpoint-block" id="delete-watch">
+        <div class="endpoint-header">
+          <span class="endpoint-method method-delete">DELETE</span>
+          <span class="endpoint-path">/watches/:id</span>
+        </div>
+        <div class="endpoint-desc">Delete a watch and all associated history events. This is irreversible — all <code>diff_events</code> for this watch are cascade-deleted.</div>
+        <div class="endpoint-body">
+          <h3>Response <span class="status-2xx">200</span></h3>
+          <div class="code-block">
+            <div class="code-block-header"><span class="code-lang">JSON</span></div>
+            <pre>{ <span class="p">"deleted"</span>: <span class="k">true</span> }</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET /watches/:id/history -->
+      <div class="endpoint-block" id="get-history">
+        <div class="endpoint-header">
+          <span class="endpoint-method method-get">GET</span>
+          <span class="endpoint-path">/watches/:id/history</span>
+        </div>
+        <div class="endpoint-desc">Returns up to the 50 most recent change events for a watch, ordered by <code>created_at</code> descending (newest first).</div>
+        <div class="endpoint-body">
+          <h3>Response <span class="status-2xx">200</span></h3>
+          <div class="code-block">
+            <div class="code-block-header"><span class="code-lang">JSON</span></div>
+            <pre>{
+  <span class="p">"events"</span>: [{
+    <span class="p">"id"</span>:                  <span class="s">"0192aabc-0001-7000-..."</span>,
+    <span class="p">"watch_id"</span>:            <span class="s">"019234ab-cdef-7890-..."</span>,
+    <span class="p">"event_type"</span>:          <span class="s">"changed"</span>,
+    <span class="p">"diff_summary"</span>:        <span class="s">"Price changed from $49 to $59 in #pricing-table"</span>,
+    <span class="p">"screenshot_url"</span>:      <span class="s">"https://cdn.snapwatch.dev/screenshots/abc123.png"</span>,
+    <span class="p">"webhook_delivered_at"</span>: <span class="s">"2026-09-07T14:00:05.000Z"</span>,
+    <span class="p">"created_at"</span>:          <span class="s">"2026-09-07T14:00:01.000Z"</span>
+  }],
+  <span class="p">"count"</span>: <span class="n">1</span>
+}</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+    <hr class="section-divider" />
+
+    <!-- DATA MODELS -->
+    <section class="docs-section" id="data-models">
+      <h2>Data Models</h2>
+
+      <h3 id="watch-object">Watch object</h3>
+      <div class="params-table-wrap">
+        <table class="params-table">
+          <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td class="param-name">id</td><td class="param-type">string (UUID)</td><td>Unique identifier</td></tr>
+            <tr><td class="param-name">url</td><td class="param-type">string</td><td>The monitored page URL</td></tr>
+            <tr><td class="param-name">webhook_url</td><td class="param-type">string</td><td>Where change notifications are delivered</td></tr>
+            <tr><td class="param-name">css_selector</td><td class="param-type">string | null</td><td>Optional CSS selector scoping change detection</td></tr>
+            <tr><td class="param-name">check_interval_minutes</td><td class="param-type">integer</td><td>Check frequency in minutes (minimum 5)</td></tr>
+            <tr><td class="param-name">last_checked_at</td><td class="param-type">ISO 8601 | null</td><td>Timestamp of the most recent check</td></tr>
+            <tr><td class="param-name">last_content_hash</td><td class="param-type">string | null</td><td>SHA-256 of the last observed content</td></tr>
+            <tr><td class="param-name">check_status</td><td class="param-type">string</td><td><code>active</code> / <code>paused</code> / <code>blocked</code></td></tr>
+            <tr><td class="param-name">created_at</td><td class="param-type">ISO 8601</td><td>Watch creation timestamp</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong><code>check_status</code> values:</strong></p>
+      <div class="params-table-wrap">
+        <table class="params-table">
+          <thead><tr><th>Value</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code>active</code></td><td>Checks are running on schedule</td></tr>
+            <tr><td><code>paused</code></td><td>Checks suspended by user via API</td></tr>
+            <tr><td><code>blocked</code></td><td>Snapwatch has been blocked by the target site (bot detection, CAPTCHA). Automatic checks are stopped.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="diffevent-object">DiffEvent object</h3>
+      <div class="params-table-wrap">
+        <table class="params-table">
+          <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td class="param-name">id</td><td class="param-type">string (UUID)</td><td>Unique event identifier</td></tr>
+            <tr><td class="param-name">watch_id</td><td class="param-type">string (UUID)</td><td>The watch this event belongs to</td></tr>
+            <tr><td class="param-name">event_type</td><td class="param-type">string</td><td><code>changed</code>, <code>blocked</code>, <code>error</code>, or <code>weekly_digest</code></td></tr>
+            <tr><td class="param-name">diff_summary</td><td class="param-type">string | null</td><td>Human-readable summary of what changed</td></tr>
+            <tr><td class="param-name">content_hash</td><td class="param-type">string | null</td><td>SHA-256 of the observed content at event time</td></tr>
+            <tr><td class="param-name">screenshot_url</td><td class="param-type">string | null</td><td>URL to a screenshot at change time</td></tr>
+            <tr><td class="param-name">webhook_delivered_at</td><td class="param-type">ISO 8601 | null</td><td>When the webhook was successfully delivered; <code>null</code> if pending or failed</td></tr>
+            <tr><td class="param-name">created_at</td><td class="param-type">ISO 8601</td><td>Event creation timestamp</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <hr class="section-divider" />
+
+    <!-- WEBHOOK EVENTS -->
+    <section class="docs-section" id="webhook-events">
+      <h2>Webhook Events</h2>
+      <p>When a watch detects a change, snapwatch delivers a POST to your <code>webhook_url</code>. All event types share the same base payload shape.</p>
+
+      <h3>Delivery headers</h3>
+      <div class="params-table-wrap">
+        <table class="params-table">
+          <thead><tr><th>Header</th><th>Value</th></tr></thead>
+          <tbody>
+            <tr><td class="param-name">Content-Type</td><td><code>application/json</code></td></tr>
+            <tr><td class="param-name">User-Agent</td><td><code>Snapwatch/1.0 (+https://snapwatch.dev)</code></td></tr>
+            <tr><td class="param-name">X-Snapwatch-Event</td><td>The event type</td></tr>
+            <tr><td class="param-name">X-Snapwatch-Watch-Id</td><td>UUID of the triggering watch</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3><span class="event-badge event-changed">changed</span>Page changed</h3>
+      <p>Fired when the monitored content hash differs from the previous check.</p>
+      <div class="code-block">
+        <div class="code-block-header"><span class="code-lang">JSON</span><span class="code-label">Payload</span></div>
+        <pre>{
+  <span class="p">"event_type"</span>:   <span class="s">"changed"</span>,
+  <span class="p">"watch_id"</span>:     <span class="s">"019234ab-cdef-7890-1234-56789abcdef0"</span>,
+  <span class="p">"url"</span>:          <span class="s">"https://acme.com/pricing"</span>,
+  <span class="p">"changed_at"</span>:   <span class="s">"2026-09-07T14:00:01.000Z"</span>,
+  <span class="p">"diff_summary"</span>: <span class="s">"Price changed from $49 to $59 in #pricing-table"</span>,
+  <span class="p">"screenshot_url"</span>: <span class="s">"https://cdn.snapwatch.dev/screenshots/abc123.png"</span>
+}</pre>
+      </div>
+
+      <h3><span class="event-badge event-blocked">blocked</span>Site blocked snapwatch</h3>
+      <p>Fired when the target site blocks snapwatch (CAPTCHA, IP block, 403/429). The watch's <code>check_status</code> is set to <code>"blocked"</code>. Visit the dashboard to investigate and re-enable.</p>
+      <div class="code-block">
+        <div class="code-block-header"><span class="code-lang">JSON</span><span class="code-label">Payload</span></div>
+        <pre>{
+  <span class="p">"event_type"</span>:   <span class="s">"blocked"</span>,
+  <span class="p">"watch_id"</span>:     <span class="s">"019234ab-..."</span>,
+  <span class="p">"url"</span>:          <span class="s">"https://acme.com/pricing"</span>,
+  <span class="p">"changed_at"</span>:   <span class="s">"2026-09-07T15:00:00.000Z"</span>,
+  <span class="p">"diff_summary"</span>: <span class="s">"Site returned 403 Forbidden — automated access may be blocked"</span>,
+  <span class="p">"screenshot_url"</span>: <span class="k">null</span>
+}</pre>
+      </div>
+
+      <h3><span class="event-badge event-error">error</span>Check failed</h3>
+      <p>Fired when a check fails for a non-blocking reason (DNS failure, timeout, unexpected HTTP error). The watch continues on its normal schedule.</p>
+      <div class="code-block">
+        <div class="code-block-header"><span class="code-lang">JSON</span><span class="code-label">Payload</span></div>
+        <pre>{
+  <span class="p">"event_type"</span>:   <span class="s">"error"</span>,
+  <span class="p">"watch_id"</span>:     <span class="s">"019234ab-..."</span>,
+  <span class="p">"url"</span>:          <span class="s">"https://acme.com/pricing"</span>,
+  <span class="p">"changed_at"</span>:   <span class="s">"2026-09-07T16:00:00.000Z"</span>,
+  <span class="p">"diff_summary"</span>: <span class="s">"Check failed: connection timed out after 30s"</span>,
+  <span class="p">"screenshot_url"</span>: <span class="k">null</span>
+}</pre>
+      </div>
+
+      <h3><span class="event-badge event-digest">weekly_digest</span>Weekly summary</h3>
+      <p>Delivered once per week regardless of whether the page changed. The only event type with additional fields: <code>checks_run</code> and <code>changes_found</code>.</p>
+      <div class="code-block">
+        <div class="code-block-header"><span class="code-lang">JSON</span><span class="code-label">Payload</span></div>
+        <pre>{
+  <span class="p">"event_type"</span>:   <span class="s">"weekly_digest"</span>,
+  <span class="p">"watch_id"</span>:     <span class="s">"019234ab-..."</span>,
+  <span class="p">"url"</span>:          <span class="s">"https://acme.com/pricing"</span>,
+  <span class="p">"changed_at"</span>:   <span class="s">"2026-09-07T09:00:00.000Z"</span>,
+  <span class="p">"diff_summary"</span>: <span class="s">"7 checks run, 1 change detected in the past 7 days"</span>,
+  <span class="p">"screenshot_url"</span>: <span class="k">null</span>,
+  <span class="p">"checks_run"</span>:   <span class="n">168</span>,
+  <span class="p">"changes_found"</span>: <span class="n">1</span>
+}</pre>
+      </div>
+    </section>
+    <hr class="section-divider" />
+
+    <!-- WEBHOOK DELIVERY -->
+    <section class="docs-section" id="webhook-delivery">
+      <h2>Webhook Delivery &amp; Retry</h2>
+      <p>Snapwatch sends <code>POST</code> to your <code>webhook_url</code> with a <strong>10-second timeout</strong>. A <code>2xx</code> HTTP response is required for a delivery to be considered successful.</p>
+
+      <h3>Retry schedule</h3>
+      <div class="retry-timeline">
+        <div class="retry-row">
+          <span>Attempt</span><span>Delay</span><span>Total elapsed</span>
+        </div>
+        <div class="retry-row">
+          <span><strong>1</strong> (initial)</span><span>Immediate</span><span>0s</span>
+        </div>
+        <div class="retry-row">
+          <span><strong>2</strong></span><span>+10 seconds</span><span>~10s</span>
+        </div>
+        <div class="retry-row">
+          <span><strong>3</strong></span><span>+60 seconds</span><span>~70s</span>
+        </div>
+        <div class="retry-row">
+          <span><strong>4</strong></span><span>+300 seconds</span><span>~370s</span>
+        </div>
+      </div>
+      <p>After 4 total attempts without a successful <code>2xx</code>, delivery is abandoned. <code>webhook_delivered_at</code> remains <code>null</code>. Redelivery is not available via API — design your webhook endpoint to be idempotent.</p>
+
+      <h3>Recommendations</h3>
+      <ul>
+        <li>Respond <code>200 OK</code> immediately, then process the payload asynchronously.</li>
+        <li>Use <code>X-Snapwatch-Watch-Id</code> + event <code>id</code> for idempotency.</li>
+        <li>If your endpoint is behind a firewall, allowlist <code>User-Agent: Snapwatch/1.0</code>.</li>
+        <li>Log <code>webhook_delivered_at</code> from history against your own receipt timestamps to detect gaps.</li>
+      </ul>
+    </section>
+    <hr class="section-divider" />
+
+    <!-- RATE LIMITS -->
+    <section class="docs-section" id="rate-limits">
+      <h2>Rate Limits</h2>
+      <div class="params-table-wrap">
+        <table class="params-table">
+          <thead><tr><th>Limit</th><th>Value</th></tr></thead>
+          <tbody>
+            <tr><td>Minimum check interval</td><td>5 minutes per watch</td></tr>
+            <tr><td>Maximum history per watch</td><td>50 events</td></tr>
+            <tr><td>Watch limit (Starter plan)</td><td>50 watches</td></tr>
+            <tr><td>Watch limit (Pro plan)</td><td>500 watches</td></tr>
+            <tr><td>Webhook delivery timeout</td><td>10 seconds</td></tr>
+            <tr><td>Webhook retry attempts</td><td>3 retries (4 total deliveries)</td></tr>
+            <tr><td>Duplicate watches</td><td>1 watch per URL per account</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <hr class="section-divider" />
+
+    <!-- SDK EXAMPLES -->
+    <section class="docs-section" id="sdk-examples">
+      <h2>SDK Examples</h2>
+
+      <h3 id="sdk-curl">curl</h3>
+      <div class="code-block">
+        <div class="code-block-header"><span class="code-lang">bash</span><span class="code-label">Create a watch</span></div>
+        <pre>curl -X POST https://api.snapwatch.dev/watches \
+  -H <span class="s">"Authorization: Bearer sw_live_YOUR_KEY"</span> \
+  -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{
+    "url": "https://acme.com/pricing",
+    "webhook_url": "https://hooks.yourapp.com/snapwatch",
+    "check_interval_minutes": 30,
+    "css_selector": "#pricing-table"
+  }'</span></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-block-header"><span class="code-lang">bash</span><span class="code-label">List all watches</span></div>
+        <pre>curl https://api.snapwatch.dev/watches \
+  -H <span class="s">"Authorization: Bearer sw_live_YOUR_KEY"</span></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-block-header"><span class="code-lang">bash</span><span class="code-label">Pause a watch</span></div>
+        <pre>curl -X PATCH https://api.snapwatch.dev/watches/WATCH_ID \
+  -H <span class="s">"Authorization: Bearer sw_live_YOUR_KEY"</span> \
+  -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{"check_status": "paused"}'</span></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-block-header"><span class="code-lang">bash</span><span class="code-label">Get watch history</span></div>
+        <pre>curl https://api.snapwatch.dev/watches/WATCH_ID/history \
+  -H <span class="s">"Authorization: Bearer sw_live_YOUR_KEY"</span></pre>
+      </div>
+
+      <h3 id="sdk-node">Node.js</h3>
+      <div class="code-block">
+        <div class="code-block-header"><span class="code-lang">JavaScript</span><span class="code-label">Create a watch + handle webhook</span></div>
+        <pre><span class="k">const</span> API_KEY  = <span class="s">"sw_live_YOUR_KEY"</span>;
+<span class="k">const</span> BASE_URL = <span class="s">"https://api.snapwatch.dev"</span>;
+<span class="k">const</span> headers  = {
+  Authorization:  <span class="s">`Bearer </span>${API_KEY}<span class="s">`</span>,
+  <span class="s">"Content-Type"</span>: <span class="s">"application/json"</span>,
+};
+
+<span class="c">// Create a watch</span>
+<span class="k">const</span> res = <span class="k">await</span> fetch(<span class="s">`</span>${BASE_URL}<span class="s">/watches`</span>, {
+  method: <span class="s">"POST"</span>,
+  headers,
+  body: JSON.stringify({
+    url:                    <span class="s">"https://acme.com/pricing"</span>,
+    webhook_url:            <span class="s">"https://hooks.yourapp.com/snapwatch"</span>,
+    check_interval_minutes: <span class="n">30</span>,
+    css_selector:           <span class="s">"#pricing-table"</span>,
+  }),
+});
+<span class="k">const</span> { watch } = <span class="k">await</span> res.json();
+console.log(<span class="s">"Created:"</span>, watch.id);
+
+<span class="c">// Handle inbound webhook (Express)</span>
+app.post(<span class="s">"/snapwatch"</span>, (req, res) => {
+  res.sendStatus(<span class="n">200</span>); <span class="c">// respond immediately</span>
+  <span class="k">const</span> { event_type, url, diff_summary, screenshot_url } = req.body;
+  <span class="k">if</span> (event_type === <span class="s">"changed"</span>) {
+    notifyTeam({ url, diff_summary, screenshot_url });
+  }
+});</pre>
+      </div>
+
+      <h3 id="sdk-python">Python</h3>
+      <div class="code-block">
+        <div class="code-block-header"><span class="code-lang">Python</span><span class="code-label">Create a watch + handle webhook</span></div>
+        <pre><span class="k">import</span> requests
+<span class="k">from</span> flask <span class="k">import</span> Flask, request, jsonify
+
+session = requests.Session()
+session.headers.update({
+    <span class="s">"Authorization"</span>: <span class="s">"Bearer sw_live_YOUR_KEY"</span>,
+    <span class="s">"Content-Type"</span>:  <span class="s">"application/json"</span>,
+})
+
+<span class="c"># Create a watch</span>
+resp = session.post(<span class="s">"https://api.snapwatch.dev/watches"</span>, json={
+    <span class="s">"url"</span>:                    <span class="s">"https://acme.com/pricing"</span>,
+    <span class="s">"webhook_url"</span>:            <span class="s">"https://hooks.yourapp.com/snapwatch"</span>,
+    <span class="s">"check_interval_minutes"</span>: <span class="n">30</span>,
+    <span class="s">"css_selector"</span>:           <span class="s">"#pricing-table"</span>,
+})
+watch = resp.json()[<span class="s">"watch"</span>]
+print(<span class="s">f"Created: </span>{watch[<span class="s">'id'</span>]}<span class="s">"</span>)
+
+<span class="c"># Handle inbound webhook (Flask)</span>
+app = Flask(__name__)
+
+@app.post(<span class="s">"/snapwatch"</span>)
+def snapwatch_webhook():
+    data = request.get_json()
+    <span class="k">if</span> data[<span class="s">"event_type"</span>] == <span class="s">"changed"</span>:
+        print(<span class="s">f"[CHANGED] </span>{data[<span class="s">'url'</span>]}<span class="s">: </span>{data[<span class="s">'diff_summary'</span>]}<span class="s">"</span>)
+    <span class="k">return</span> jsonify({<span class="s">"received"</span>: <span class="k">True</span>}), <span class="n">200</span></pre>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <p>
+    &copy; 2026 snapwatch &mdash;
+    <a href="index.html">Home</a> &middot;
+    <a href="blog/index.html">Blog</a> &middot;
+    <a href="docs.html">API Docs</a> &middot;
+    <a href="index.html#pricing">Pricing</a>
+  </p>
+</footer>
+
+</body>
+</html>
