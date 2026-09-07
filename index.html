@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>snapwatch — Website Change Monitoring API for Developers</title>
+  <meta name="description" content="REST API for website change monitoring. POST a URL, receive a webhook the moment it changes. Visual diffs, CSS selector targeting, Cloudflare edge. Free tier included." />
+  <meta property="og:title" content="snapwatch — Website Change Monitoring API" />
+  <meta property="og:description" content="POST a URL. Get a webhook when it changes. Developer-first change monitoring with visual diffs." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Mulish:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #080808;
+      --bg-surface:  #0D0D0D;
+      --bg-card:     #111111;
+      --border:      #1E1E1E;
+      --border-hi:   #2A2A2A;
+      --accent:      #FF8C00;
+      --accent-dim:  rgba(255, 140, 0, 0.12);
+      --accent-glow: rgba(255, 140, 0, 0.25);
+      --amber:       #FFB700;
+      --red:         #FF4444;
+      --green:       #00C97A;
+      --text-hi:     #F0F0F0;
+      --text-lo:     #A0A0A0;
+      --text-xlo:    #5A5A5A;
+      --font-display: 'Syne', sans-serif;
+      --font-body:    'Mulish', sans-serif;
+      --font-mono:    'JetBrains Mono', monospace;
+      --grid-size:    60px;
+      --radius:       12px;
+      --radius-lg:    20px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-hi);
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,140,0,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,140,0,0.025) 1px, transparent 1px);
+      background-size: var(--grid-size) var(--grid-size);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
+    a { color: inherit; text-decoration: none; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse-ring {
+      0%   { transform: scale(1); opacity: 0.8; }
+      70%  { transform: scale(1.8); opacity: 0; }
+      100% { transform: scale(1.8); opacity: 0; }
+    }
+    @keyframes shimmer {
+      0%   { transform: translateX(-100%) skewX(-12deg); }
+      100% { transform: translateX(250%) skewX(-12deg); }
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0; }
+    }
+
+    .fade-up { animation: fadeUp 0.6s ease both; }
+    .fade-up-2 { animation-delay: 0.1s; }
+    .fade-up-3 { animation-delay: 0.2s; }
+    .fade-up-4 { animation-delay: 0.3s; }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      border-bottom: 1px solid var(--border);
+      background: rgba(8,8,8,0.85);
+      backdrop-filter: blur(16px);
+    }
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+    }
+    .nav-logo {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .nav-logo span { color: var(--accent); }
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: 0.875rem;
+      color: var(--text-lo);
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text-hi); }
+    .nav-cta {
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+      font-size: 0.875rem;
+      padding: 8px 20px;
+      border-radius: 8px;
+      transition: opacity 0.2s;
+    }
+    .nav-cta:hover { opacity: 0.85; }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      padding: 160px 0 100px;
+      text-align: center;
+      overflow: hidden;
+    }
+    .hero-glow {
+      position: absolute;
+      top: -60px; left: 50%;
+      transform: translateX(-50%);
+      width: 700px; height: 400px;
+      background: radial-gradient(ellipse at center, rgba(255,140,0,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(255,140,0,0.25);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 28px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .pulse-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      position: relative;
+    }
+    .pulse-dot::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse-ring 1.8s ease-out infinite;
+    }
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      margin-bottom: 24px;
+    }
+    h1 em {
+      font-style: normal;
+      color: var(--accent);
+    }
+    .hero-sub {
+      font-size: clamp(1rem, 2vw, 1.25rem);
+      color: var(--text-lo);
+      max-width: 600px;
+      margin: 0 auto 40px;
+      line-height: 1.7;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 64px;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+      font-size: 0.95rem;
+      padding: 14px 28px;
+      border-radius: 10px;
+      position: relative;
+      overflow: hidden;
+      transition: opacity 0.2s;
+    }
+    .btn-primary::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      animation: shimmer 3s ease infinite;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-ghost {
+      border: 1px solid var(--border-hi);
+      color: var(--text-lo);
+      font-size: 0.95rem;
+      padding: 14px 28px;
+      border-radius: 10px;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--text-hi); }
+
+    /* ── Hero Code Demo ── */
+    .hero-demo {
+      position: relative;
+      max-width: 800px;
+      margin: 0 auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .demo-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-surface);
+    }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-red    { background: #FF5F57; }
+    .dot-yellow { background: #FEBC2E; }
+    .dot-green  { background: #28C840; }
+    .demo-label {
+      margin-left: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-xlo);
+    }
+    .demo-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+    .demo-panel {
+      padding: 24px;
+    }
+    .demo-panel:first-child {
+      border-right: 1px solid var(--border);
+    }
+    .demo-panel-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-xlo);
+      margin-bottom: 16px;
+    }
+    pre {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      line-height: 1.7;
+      color: var(--text-lo);
+      overflow-x: auto;
+    }
+    .kw  { color: #FF8C00; }
+    .str { color: #00C97A; }
+    .num { color: #FFB700; }
+    .key { color: #A78BFA; }
+    .cmt { color: #5A5A5A; }
+
+    /* ── Stats Bar ── */
+    .stats-bar {
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 28px 0;
+      position: relative;
+      z-index: 1;
+    }
+    .stats-inner {
+      display: flex;
+      justify-content: center;
+      gap: 64px;
+      flex-wrap: wrap;
+    }
+    .stat { text-align: center; }
+    .stat-value {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-xlo);
+      margin-top: 4px;
+    }
+
+    /* ── Section Shared ── */
+    section { position: relative; z-index: 1; }
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-family: var(--font-display);
+      font-size: clamp(1.75rem, 3.5vw, 2.75rem);
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+    .section-sub {
+      font-size: 1.05rem;
+      color: var(--text-lo);
+      max-width: 560px;
+      line-height: 1.7;
+    }
+
+    /* ── How It Works ── */
+    .how { padding: 100px 0; }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      margin-top: 60px;
+      background: var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .step {
+      background: var(--bg-card);
+      padding: 40px 32px;
+      position: relative;
+    }
+    .step-num {
+      font-family: var(--font-display);
+      font-size: 3rem;
+      font-weight: 800;
+      color: var(--accent-dim);
+      line-height: 1;
+      margin-bottom: 20px;
+    }
+    .step h3 {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .step p {
+      font-size: 0.9rem;
+      color: var(--text-lo);
+      line-height: 1.7;
+    }
+    .step-code {
+      margin-top: 20px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-lo);
+    }
+
+    /* ── Features ── */
+    .features { padding: 80px 0 100px; }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      margin-top: 60px;
+      background: var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .feature {
+      background: var(--bg-card);
+      padding: 36px 28px;
+    }
+    .feature-icon {
+      font-size: 1.8rem;
+      margin-bottom: 16px;
+    }
+    .feature h3 {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .feature p {
+      font-size: 0.875rem;
+      color: var(--text-lo);
+      line-height: 1.65;
+    }
+    .feature-tag {
+      display: inline-block;
+      margin-top: 12px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* ── Use Cases ── */
+    .usecases { padding: 80px 0; }
+    .cases-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2px;
+      margin-top: 48px;
+      background: var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .case {
+      background: var(--bg-card);
+      padding: 36px 32px;
+    }
+    .case-persona {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+    .case h3 {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .case p {
+      font-size: 0.875rem;
+      color: var(--text-lo);
+      line-height: 1.65;
+    }
+
+    /* ── Webhook Payload Demo ── */
+    .payload-section { padding: 80px 0; }
+    .payload-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin-top: 48px;
+    }
+    .payload-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-surface);
+    }
+    .payload-tab {
+      padding: 14px 24px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-xlo);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+    .payload-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .payload-body { padding: 32px; }
+
+    /* ── Pricing ── */
+    .pricing { padding: 100px 0; }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 60px;
+    }
+    .price-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 36px 28px;
+      position: relative;
+      transition: border-color 0.2s;
+    }
+    .price-card:hover { border-color: var(--accent); }
+    .price-card.popular {
+      border-color: var(--accent);
+    }
+    .popular-badge {
+      position: absolute;
+      top: -14px; left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: #000;
+      font-size: 0.7rem;
+      font-weight: 800;
+      padding: 4px 14px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .price-tier {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-xlo);
+      margin-bottom: 12px;
+    }
+    .price-amount {
+      font-family: var(--font-display);
+      font-size: 3rem;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .price-amount sup {
+      font-size: 1.2rem;
+      vertical-align: top;
+      margin-top: 8px;
+    }
+    .price-period {
+      font-size: 0.8rem;
+      color: var(--text-xlo);
+      margin-bottom: 24px;
+    }
+    .price-divider {
+      height: 1px;
+      background: var(--border);
+      margin-bottom: 24px;
+    }
+    .price-features {
+      list-style: none;
+      margin-bottom: 28px;
+    }
+    .price-features li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.875rem;
+      color: var(--text-lo);
+      margin-bottom: 10px;
+    }
+    .price-check { color: var(--green); flex-shrink: 0; }
+    .price-dash   { color: var(--text-xlo); flex-shrink: 0; }
+    .price-btn {
+      display: block;
+      width: 100%;
+      text-align: center;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      transition: opacity 0.2s;
+      border: 1px solid var(--border-hi);
+      color: var(--text-lo);
+    }
+    .price-btn:hover { opacity: 0.8; }
+    .price-card.popular .price-btn {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+    }
+
+    /* ── FAQ ── */
+    .faq { padding: 80px 0 100px; }
+    .faq-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2px;
+      margin-top: 48px;
+      background: var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .faq-item {
+      background: var(--bg-card);
+      padding: 32px 28px;
+    }
+    .faq-item h3 {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .faq-item p {
+      font-size: 0.875rem;
+      color: var(--text-lo);
+      line-height: 1.65;
+    }
+    .faq-item code {
+      font-family: var(--font-mono);
+      font-size: 0.8em;
+      background: var(--bg-surface);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--accent);
+    }
+
+    /* ── CTA ── */
+    .cta-section {
+      padding: 100px 0;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-glow {
+      position: absolute;
+      bottom: -40px; left: 50%;
+      transform: translateX(-50%);
+      width: 600px; height: 300px;
+      background: radial-gradient(ellipse, rgba(255,140,0,0.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .cta-section h2 {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      margin-bottom: 16px;
+    }
+    .cta-section p {
+      color: var(--text-lo);
+      font-size: 1.05rem;
+      margin-bottom: 40px;
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 0;
+      position: relative;
+      z-index: 1;
+    }
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .footer-logo {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 800;
+    }
+    .footer-logo span { color: var(--accent); }
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+    .footer-links a {
+      font-size: 0.85rem;
+      color: var(--text-xlo);
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--text-hi); }
+    .footer-copy {
+      font-size: 0.8rem;
+      color: var(--text-xlo);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .demo-body { grid-template-columns: 1fr; }
+      .demo-panel:first-child { border-right: none; border-bottom: 1px solid var(--border); }
+      .steps, .features-grid { grid-template-columns: 1fr; }
+      .cases-grid, .faq-grid { grid-template-columns: 1fr; }
+      .pricing-grid { grid-template-columns: 1fr; }
+      .stats-inner { gap: 32px; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Nav ── -->
+<nav>
+  <div class="container">
+    <div class="nav-inner">
+      <div class="nav-logo">snap<span>watch</span></div>
+      <ul class="nav-links">
+        <li><a href="#how">How it works</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+      <a href="#pricing" class="nav-cta">Get API key</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Hero ── -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="container">
+    <div class="hero-badge fade-up">
+      <span class="pulse-dot"></span>
+      Now monitoring — developer-first API
+    </div>
+    <h1 class="fade-up fade-up-2">
+      Know the moment<br /><em>anything changes.</em>
+    </h1>
+    <p class="hero-sub fade-up fade-up-3">
+      POST a URL. Receive a webhook when its content changes.
+      Visual diffs, screenshot snapshots, weekly digests — built on Cloudflare's global edge.
+    </p>
+    <div class="hero-actions fade-up fade-up-4">
+      <a href="#pricing" class="btn-primary">Start monitoring free</a>
+      <a href="#how" class="btn-ghost">See how it works →</a>
+    </div>
+
+    <!-- Code demo -->
+    <div class="hero-demo fade-up">
+      <div class="demo-titlebar">
+        <span class="dot dot-red"></span>
+        <span class="dot dot-yellow"></span>
+        <span class="dot dot-green"></span>
+        <span class="demo-label">Terminal — curl + webhook payload</span>
+      </div>
+      <div class="demo-body">
+        <div class="demo-panel">
+          <div class="demo-panel-label">1. Create a watch</div>
+          <pre><span class="cmt"># POST a URL to monitor</span>
+<span class="kw">curl</span> -X POST https://api.snapwatch.dev/watches \
+  -H <span class="str">"Authorization: Bearer sw_live_..."</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "url": "https://competitor.com/pricing",
+    "webhook_url": "https://yourapp.com/hooks/sw",
+    "check_interval_minutes": 60
+  }'</span>
+
+<span class="cmt"># Response:</span>
+{
+  <span class="key">"watch_id"</span>: <span class="str">"w_7f3a..."</span>,
+  <span class="key">"url"</span>: <span class="str">"https://competitor.com/pricing"</span>,
+  <span class="key">"status"</span>: <span class="str">"active"</span>,
+  <span class="key">"next_check_at"</span>: <span class="str">"2026-09-07T18:00:00Z"</span>
+}</pre>
+        </div>
+        <div class="demo-panel">
+          <div class="demo-panel-label">2. Receive your webhook</div>
+          <pre><span class="cmt"># Webhook fired when content changes:</span>
+{
+  <span class="key">"event"</span>: <span class="str">"changed"</span>,
+  <span class="key">"watch_id"</span>: <span class="str">"w_7f3a..."</span>,
+  <span class="key">"url"</span>: <span class="str">"https://competitor.com/pricing"</span>,
+  <span class="key">"changed_at"</span>: <span class="str">"2026-09-07T18:04:22Z"</span>,
+  <span class="key">"diff_summary"</span>: <span class="str">"Pro plan price changed
+from $49/mo to $39/mo. New
+annual billing option added."</span>,
+  <span class="key">"screenshot_before"</span>: <span class="str">"https://cdn.snapwatch.dev/..."</span>,
+  <span class="key">"screenshot_after"</span>:  <span class="str">"https://cdn.snapwatch.dev/..."</span>,
+  <span class="key">"history_url"</span>: <span class="str">"https://api.snapwatch.dev/..."</span>
+}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Stats Bar ── -->
+<div class="stats-bar">
+  <div class="container">
+    <div class="stats-inner">
+      <div class="stat">
+        <div class="stat-value">32K+</div>
+        <div class="stat-label">developers self-host change monitoring today</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">&lt; 2s</div>
+        <div class="stat-label">webhook delivery after change detected</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">200+</div>
+        <div class="stat-label">cities on Cloudflare's edge network</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">95%</div>
+        <div class="stat-label">SaaS companies have competitor pages to watch</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── How It Works ── -->
+<section class="how" id="how">
+  <div class="container">
+    <div class="section-label">Simple by design</div>
+    <h2 class="section-title">Three steps.<br />No infrastructure.</h2>
+    <p class="section-sub">
+      No polling loops. No cron jobs. No headless browser maintenance.
+      Just an API call and a webhook endpoint.
+    </p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <h3>Register a watch</h3>
+        <p>POST a URL and your webhook endpoint. Optionally add a CSS selector to monitor only a specific element.</p>
+        <div class="step-code">POST /watches<br />{ url, webhook_url, css_selector? }</div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <h3>We monitor it</h3>
+        <p>snapwatch checks on your schedule (15min, 1hr, or daily). CAPTCHA blocks are reported instantly, not silently swallowed.</p>
+        <div class="step-code">GET /watches/:id<br />{ status: "active", last_checked_at }</div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <h3>Receive rich webhooks</h3>
+        <p>When content changes: a webhook fires with a diff summary + before/after screenshot URLs. Even quiet monitors send a weekly digest.</p>
+        <div class="step-code">POST your_webhook_url<br />{ event: "changed", diff_summary, screenshots }</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Features ── -->
+<section class="features" id="features">
+  <div class="container">
+    <div class="section-label">Built for developers</div>
+    <h2 class="section-title">Every feature you need.<br />Nothing you don't.</h2>
+
+    <div class="features-grid">
+      <div class="feature">
+        <div class="feature-icon">📸</div>
+        <h3>Before/After Screenshots</h3>
+        <p>Every change event includes screenshot URLs showing the page before and after. Powered by our shot.dev infrastructure — no extra cost.</p>
+        <span class="feature-tag">Visual diff</span>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🎯</div>
+        <h3>CSS Selector Targeting</h3>
+        <p>Monitor only the section that matters — a price table, a changelog entry, a job listing — and ignore noisy navigation or ads.</p>
+        <span class="feature-tag">Pro</span>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🔁</div>
+        <h3>Webhook Retry + DLQ</h3>
+        <p>Delivery fails? Automatic 3-attempt exponential backoff (10s → 60s → 300s). Failed events land in a dead-letter queue for inspection.</p>
+        <span class="feature-tag">Reliable</span>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">📊</div>
+        <h3>Weekly Digest Webhooks</h3>
+        <p>Even when nothing changes, you get a Monday summary: checks run, changes found, monitors blocked. Proactive value on silent weeks.</p>
+        <span class="feature-tag">Retention</span>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🛡️</div>
+        <h3>CAPTCHA-Aware Monitoring</h3>
+        <p>We detect blocks and fire a <code>blocked</code> event instead of silently failing. You always know why a check didn't produce a diff.</p>
+        <span class="feature-tag">Transparent</span>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🌍</div>
+        <h3>Cloudflare Edge Network</h3>
+        <p>Checks run from Cloudflare's 200+ city network. Sub-second page fetches. No cold starts. No single point of failure.</p>
+        <span class="feature-tag">Global</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Use Cases ── -->
+<section class="usecases">
+  <div class="container">
+    <div class="section-label">Who uses snapwatch</div>
+    <h2 class="section-title">Built for products,<br />not dashboards.</h2>
+
+    <div class="cases-grid">
+      <div class="case">
+        <div class="case-persona">SaaS Founders</div>
+        <h3>Competitor pricing intelligence</h3>
+        <p>Watch competitor pricing pages, feature announcements, and job boards. Get a Slack ping the minute a rival changes their plan structure — before your sales team hears it from a prospect.</p>
+      </div>
+      <div class="case">
+        <div class="case-persona">Product Builders</div>
+        <h3>Embed change monitoring in your product</h3>
+        <p>Building a price tracking tool? Compliance dashboard? Brand monitoring app? Use snapwatch as infrastructure. Your users configure watches via your UI; webhooks flow to your backend. One API, millions of watches.</p>
+      </div>
+      <div class="case">
+        <div class="case-persona">Legal & Compliance</div>
+        <h3>Policy and terms monitoring</h3>
+        <p>Track vendor privacy policies, regulatory agency pages, and partner terms of service. The 90-day diff history gives your legal team an audit trail without any manual checking.</p>
+      </div>
+      <div class="case">
+        <div class="case-persona">E-commerce & Retail</div>
+        <h3>MAP compliance and inventory alerts</h3>
+        <p>Monitor marketplace listings for MAP violations. Watch competitor stock pages for restock events. Trigger repricer logic the moment a competitor's price changes on a product page.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Webhook Payload ── -->
+<section class="payload-section">
+  <div class="container">
+    <div class="section-label">API Reference</div>
+    <h2 class="section-title">Clean, predictable payloads.</h2>
+    <p class="section-sub">Every webhook event is consistent JSON. Three event types: <code style="font-family:var(--font-mono);font-size:0.85em;background:var(--bg-card);padding:2px 8px;border-radius:4px;color:var(--accent)">changed</code>, <code style="font-family:var(--font-mono);font-size:0.85em;background:var(--bg-card);padding:2px 8px;border-radius:4px;color:var(--accent)">blocked</code>, <code style="font-family:var(--font-mono);font-size:0.85em;background:var(--bg-card);padding:2px 8px;border-radius:4px;color:var(--accent)">weekly_digest</code>.</p>
+
+    <div class="payload-card">
+      <div class="payload-tabs">
+        <div class="payload-tab active">changed</div>
+        <div class="payload-tab">blocked</div>
+        <div class="payload-tab">weekly_digest</div>
+      </div>
+      <div class="payload-body">
+        <pre>{
+  <span class="key">"event"</span>:              <span class="str">"changed"</span>,
+  <span class="key">"watch_id"</span>:          <span class="str">"w_7f3a4b2c..."</span>,
+  <span class="key">"url"</span>:               <span class="str">"https://example.com/pricing"</span>,
+  <span class="key">"changed_at"</span>:        <span class="str">"2026-09-07T18:04:22Z"</span>,
+  <span class="key">"diff_summary"</span>:      <span class="str">"Pro plan price changed from $49/mo to $39/mo..."</span>,
+  <span class="key">"content_hash"</span>:      <span class="str">"a3f9b2e1..."</span>,
+  <span class="key">"screenshot_before"</span>: <span class="str">"https://cdn.snapwatch.dev/diffs/w_7f3a/before.png"</span>,
+  <span class="key">"screenshot_after"</span>:  <span class="str">"https://cdn.snapwatch.dev/diffs/w_7f3a/after.png"</span>,
+  <span class="key">"history_url"</span>:       <span class="str">"https://api.snapwatch.dev/watches/w_7f3a/history"</span>
+}</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Pricing ── -->
+<section class="pricing" id="pricing">
+  <div class="container">
+    <div class="section-label" style="text-align:center">Transparent pricing</div>
+    <h2 class="section-title" style="text-align:center">Per-URL flat rate.<br />No credit surprises.</h2>
+    <p class="section-sub" style="text-align:center;margin:0 auto 0">No per-check credits. No overage roulette. Just a flat monthly rate per monitored URL.</p>
+
+    <div class="pricing-grid">
+      <!-- Starter -->
+      <div class="price-card fade-up">
+        <p class="price-tier">Starter</p>
+        <div class="price-amount"><sup>$</sup>29</div>
+        <p class="price-period">per month</p>
+        <div class="price-divider"></div>
+        <ul class="price-features">
+          <li><span class="price-check">✓</span> 50 monitored URLs</li>
+          <li><span class="price-check">✓</span> 1-hour check frequency</li>
+          <li><span class="price-check">✓</span> Webhook delivery</li>
+          <li><span class="price-check">✓</span> 30-day diff history</li>
+          <li><span class="price-check">✓</span> Weekly digest webhooks</li>
+          <li><span class="price-dash">–</span> CSS selector targeting</li>
+          <li><span class="price-dash">–</span> Screenshot diffs</li>
+          <li><span class="price-dash">–</span> 15-min frequency</li>
+        </ul>
+        <a href="https://github.com/Valere3162/snapwatch/issues/new?title=Starter+Access+Request&labels=waitlist" class="price-btn">Join waitlist</a>
+      </div>
+
+      <!-- Pro -->
+      <div class="price-card popular fade-up fade-up-2">
+        <div class="popular-badge">★ Popular</div>
+        <p class="price-tier">Pro</p>
+        <div class="price-amount"><sup>$</sup>79</div>
+        <p class="price-period">per month</p>
+        <div class="price-divider"></div>
+        <ul class="price-features">
+          <li><span class="price-check">✓</span> 500 monitored URLs</li>
+          <li><span class="price-check">✓</span> 15-minute check frequency</li>
+          <li><span class="price-check">✓</span> Webhook delivery + retry</li>
+          <li><span class="price-check">✓</span> 90-day diff history</li>
+          <li><span class="price-check">✓</span> Weekly digest webhooks</li>
+          <li><span class="price-check">✓</span> CSS selector targeting</li>
+          <li><span class="price-check">✓</span> Before/after screenshots</li>
+          <li><span class="price-dash">–</span> 5-minute frequency</li>
+        </ul>
+        <a href="https://github.com/Valere3162/snapwatch/issues/new?title=Pro+Access+Request&labels=waitlist" class="price-btn">Join waitlist</a>
+      </div>
+
+      <!-- Scale -->
+      <div class="price-card fade-up fade-up-3">
+        <p class="price-tier">Scale</p>
+        <div class="price-amount"><sup>$</sup>199</div>
+        <p class="price-period">per month</p>
+        <div class="price-divider"></div>
+        <ul class="price-features">
+          <li><span class="price-check">✓</span> 5,000 monitored URLs</li>
+          <li><span class="price-check">✓</span> 5-minute check frequency</li>
+          <li><span class="price-check">✓</span> Priority webhook delivery</li>
+          <li><span class="price-check">✓</span> 1-year diff history</li>
+          <li><span class="price-check">✓</span> Weekly digest webhooks</li>
+          <li><span class="price-check">✓</span> CSS selector targeting</li>
+          <li><span class="price-check">✓</span> Before/after screenshots</li>
+          <li><span class="price-check">✓</span> 99.9% uptime SLA</li>
+        </ul>
+        <a href="https://github.com/Valere3162/snapwatch/issues/new?title=Scale+Access+Request&labels=waitlist" class="price-btn">Join waitlist</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FAQ ── -->
+<section class="faq" id="faq">
+  <div class="container">
+    <div class="section-label">Common questions</div>
+    <h2 class="section-title">FAQ</h2>
+
+    <div class="faq-grid">
+      <div class="faq-item">
+        <h3>Does snapwatch handle pages behind login or bot protection?</h3>
+        <p>No — snapwatch monitors publicly accessible pages. If a page returns a CAPTCHA or access-denied response, we fire a <code>blocked</code> event so your system knows the check ran but was blocked. We won't silently fail. Most SaaS pricing, changelog, and docs pages are public and work reliably.</p>
+      </div>
+      <div class="faq-item">
+        <h3>How is this different from changedetection.io?</h3>
+        <p>changedetection.io is a self-hosted dashboard. snapwatch is a REST API. If you're building a product (a competitor tracker, price monitor, compliance tool), you want an API you can call programmatically — not a Docker container you maintain. snapwatch fits inside your architecture; changedetection.io is your architecture.</p>
+      </div>
+      <div class="faq-item">
+        <h3>What happens when nothing changes?</h3>
+        <p>Every Monday at 9am UTC, your webhook receives a <code>weekly_digest</code> event with a count of checks run and changes found. Quiet monitors still deliver value — you know they're running cleanly. This prevents the "I forgot I was paying for this" churn pattern.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Where do the screenshot diffs come from?</h3>
+        <p>We use our own shot.dev infrastructure — the same Cloudflare Browser Rendering API that powers shot.dev. Before/after screenshots are stored on Cloudflare R2 and linked in every <code>changed</code> webhook. No third-party screenshot service, no additional latency.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Can I monitor a specific section of a page?</h3>
+        <p>Yes — pass a <code>css_selector</code> when creating a watch. We record the selector and use it to scope the diff. Example: <code>#pricing-table</code> to monitor only the pricing section and ignore navigation, footer, and cookie banners.</p>
+      </div>
+      <div class="faq-item">
+        <h3>What's the check frequency on each plan?</h3>
+        <p>Starter: 1-hour minimum. Pro: 15-minute minimum. Scale: 5-minute minimum. You set <code>check_interval_minutes</code> on each watch — it can be longer than the plan minimum but not shorter. Most use cases (competitor monitoring, compliance tracking) work well at 1-hour frequency.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ── -->
+<section class="cta-section">
+  <div class="cta-glow"></div>
+  <div class="container">
+    <h2 class="fade-up">Stop checking tabs.<br />Start receiving webhooks.</h2>
+    <p class="fade-up fade-up-2">Join the waitlist. First 100 signups get 3 months of Pro free.</p>
+    <div class="fade-up fade-up-3">
+      <a href="https://github.com/Valere3162/snapwatch/issues/new?title=Early+Access+Request&labels=waitlist&body=**Use+case:**+%0A%0A**URLs+to+monitor:**+%0A%0A**Expected+volume:**+" class="btn-primary" style="font-size:1rem;padding:16px 36px">
+        Request early access →
+      </a>
+    </div>
+    <p style="margin-top:20px;font-size:0.8rem;color:var(--text-xlo)">
+      Also part of the <a href="https://valere3162.github.io/snap-suite/" style="color:var(--accent);text-decoration:underline">Snap Suite</a> — snapog · shot.dev · pdfsnap · snapmail
+    </p>
+  </div>
+</section>
+
+<!-- ── Footer ── -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-logo">snap<span>watch</span></div>
+      <ul class="footer-links">
+        <li><a href="#how">How it works</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="https://github.com/Valere3162/snapwatch">GitHub</a></li>
+        <li><a href="https://valere3162.github.io/snap-suite/">Snap Suite</a></li>
+      </ul>
+      <span class="footer-copy">© 2026 snapwatch. Built on Cloudflare.</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
